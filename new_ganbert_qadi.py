@@ -14,6 +14,9 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 #!pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 #!pip install sentencepiece
 
+import sys
+sys.stdout = open('output.txt', 'w')
+
 ##Set random values
 seed_val = 42
 random.seed(seed_val)
@@ -739,3 +742,4 @@ for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
 print(confusion_matrix)
+sys.stdout.close()
