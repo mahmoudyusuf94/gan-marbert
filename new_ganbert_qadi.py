@@ -14,8 +14,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 #!pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 #!pip install sentencepiece
 
-import sys
-sys.stdout = open('output.txt', 'w')
+file = open("out.txt", "w")
 
 ##Set random values
 seed_val = 42
@@ -29,14 +28,17 @@ if torch.cuda.is_available():
 if torch.cuda.is_available():    
     # Tell PyTorch to use the GPU.    
     device = torch.device("cuda")
-    print('There are %d GPU(s) available.' % torch.cuda.device_count())
-    print('We will use the GPU:', torch.cuda.get_device_name(0))
+    file.write('There are %d GPU(s) available.' % torch.cuda.device_count())
+    file.write("\n")
+    file.write('We will use the GPU:'+ torch.cuda.get_device_name(0))
+    file.write("\n")
 # If not...
 else:
-    print('No GPU available, using the CPU instead.')
+    file.write('No GPU available, using the CPU instead.')
+    file.write("\n")
     device = torch.device("cpu")
 
-
+file.flush()
 #--------------------------------
 #  Transformer parameters
 #--------------------------------
@@ -383,7 +385,7 @@ if torch.cuda.is_available():
   if multi_gpu:
     transformer = torch.nn.DataParallel(transformer)
 
-# print(config)
+# file.write(config)
 
 # """Let's go with the training procedure"""
 
@@ -424,9 +426,13 @@ for epoch_i in range(0, num_train_epochs):
     #               Training
     # ========================================
     # Perform one full pass over the training set.
-    print("")
-    print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
-    print('Training...')
+    file.write("")
+    file.write("\n")
+    file.write('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
+    file.write("\n")
+    file.write('Training...')
+    file.write("\n")
+    file.flush()
 
     # Measure how long the training epoch takes.
     t0 = time.time()
@@ -449,7 +455,9 @@ for epoch_i in range(0, num_train_epochs):
             elapsed = format_time(time.time() - t0)
             
             # Report progress.
-            print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+            file.write('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+            file.write("\n")
+            file.flush()
 
         # Unpack this training batch from our dataloader. 
         b_input_ids = batch[0].to(device)
@@ -536,7 +544,7 @@ for epoch_i in range(0, num_train_epochs):
         dis_optimizer.step()
 
         # A detail log of the individual losses
-        #print("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
+        #file.write("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
         #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
         #             g_loss_d, g_feat_reg))
 
@@ -556,18 +564,23 @@ for epoch_i in range(0, num_train_epochs):
     # Measure how long this epoch took.
     training_time = format_time(time.time() - t0)
 
-    print("")
-    print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
-    print("  Training epcoh took: {:}".format(training_time))
-        
+    file.write("")
+    file.write("\n")
+    file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
+    file.write("\n")
+    file.write("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
+    file.write("\n")
+    file.write("  Training epcoh took: {:}".format(training_time))
+    file.write("\n")
+    file.flush()
     # ========================================
     #     TEST ON THE EVALUATION DATASET
     # ========================================
     # After the completion of each training epoch, measure our performance on
     # our test set.
-    print("")
-    print("Running Test...")
+    file.write("")
+    file.write("Running Test...")
+    file.write("\n")
 
     t0 = time.time()
 
@@ -618,8 +631,10 @@ for epoch_i in range(0, num_train_epochs):
     all_labels_ids = torch.stack(all_labels_ids).numpy()
     test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
     test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-    print("  Test Accuracy: {0:.3f}".format(test_accuracy))
-    print("  Test F1: {0:.3f}".format(test_f1))
+    file.write("  Test Accuracy: {0:.3f}".format(test_accuracy))
+    file.write("\n")
+    file.write("  Test F1: {0:.3f}".format(test_f1))
+    file.write("\n")
 
     # Calculate the average loss over all of the batches.
     avg_test_loss = total_test_loss / len(test_dataloader)
@@ -628,9 +643,11 @@ for epoch_i in range(0, num_train_epochs):
     # Measure how long the validation run took.
     test_time = format_time(time.time() - t0)
     
-    print("  Test Loss: {0:.3f}".format(avg_test_loss))
-    print("  Test took: {:}".format(test_time))
-
+    file.write("  Test Loss: {0:.3f}".format(avg_test_loss))
+    file.write("\n")
+    file.write("  Test took: {:}".format(test_time))
+    file.write("\n")
+    file.flush()
     # Record all statistics from this epoch.
     training_stats.append(
         {
@@ -648,28 +665,35 @@ for epoch_i in range(0, num_train_epochs):
 
 
 for stat in training_stats:
-  print(stat)
+  file.write(stat)
+  file.write("\n")
 
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-print(confusion_matrix)
+file.write(confusion_matrix)
+file.write("\n")
 
-print("\nTraining complete!")
+file.write("\nTraining complete!")
+file.write("\n")
 
-print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+file.write("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+file.write("\n")
 
 
-print(" Evaluating Original Test Data Without Cleaning")
-
+file.write(" Evaluating Original Test Data Without Cleaning")
+file.write("\n")
+file.flush()
 
 # ==============ADDED CELL ==== NOT CLEANED TEST SET ==========================
     #     TEST ON THE  UN-CLEANED EVALUATION DATASET
     # ========================================
     # ORIGINAL TEST SET NOT CLEANED.
-print("")
-print("Running Test...")
+file.write("")
+file.write("\n")
+file.write("Running Test...")
+file.write("\n")
 
 t0 = time.time()
 
@@ -720,8 +744,10 @@ all_preds = torch.stack(all_preds).numpy()
 all_labels_ids = torch.stack(all_labels_ids).numpy()
 test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
 test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-print(" Original Test not cleaned - Accuracy: {0:.3f}".format(test_accuracy))
-print(" Original Test not cleaned - F1: {0:.3f}".format(test_f1))
+file.write(" Original Test not cleaned - Accuracy: {0:.3f}".format(test_accuracy))
+file.write("\n")
+file.write(" Original Test not cleaned - F1: {0:.3f}".format(test_f1))
+file.write("\n")
 
 # Calculate the average loss over all of the batches.
 avg_test_loss = total_test_loss / len(test_dataloader)
@@ -730,16 +756,22 @@ avg_test_loss = avg_test_loss.item()
 # Measure how long the validation run took.
 test_time = format_time(time.time() - t0)
 
-print(" Original Test not cleaned - Loss: {0:.3f}".format(avg_test_loss))
-print(" Original Test not cleaned - Loss took: {:}".format(test_time))
+file.write(" Original Test not cleaned - Loss: {0:.3f}".format(avg_test_loss))
+file.write("\n")
+file.write(" Original Test not cleaned - Loss took: {:}".format(test_time))
+file.write("\n")
 
-print(all_preds)
-print(all_labels_ids)
+file.write(all_preds)
+file.write("\n")
+file.write(all_labels_ids)
+file.write("\n")
 label_list[all_preds[0]]
 
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-print(confusion_matrix)
-sys.stdout.close()
+file.write(confusion_matrix)
+file.write("\n")
+file.flush()
+file.close()
