@@ -22,15 +22,17 @@ torch.manual_seed(seed_val)
 if torch.cuda.is_available():
   torch.cuda.manual_seed_all(seed_val)
 
+f = open("output.txt", "w")
+
 # If there's a GPU available... 
 if torch.cuda.is_available():    
     # Tell PyTorch to use the GPU.    
     device = torch.device("cuda")
-    print('There are %d GPU(s) available.' % torch.cuda.device_count())
-    print('We will use the GPU:', torch.cuda.get_device_name(0))
+    print('There are %d GPU(s) available.' % torch.cuda.device_count(), file=f)
+    print('We will use the GPU:', torch.cuda.get_device_name(0), file=f)
 # If not...
 else:
-    print('No GPU available, using the CPU instead.')
+    print('No GPU available, using the CPU instead.', file=f)
     device = torch.device("cpu")
 
 
@@ -421,9 +423,9 @@ for epoch_i in range(0, num_train_epochs):
     #               Training
     # ========================================
     # Perform one full pass over the training set.
-    print("")
-    print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
-    print('Training...')
+    print("", file=f)
+    print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs), file=f)
+    print('Training...', file=f)
 
     # Measure how long the training epoch takes.
     t0 = time.time()
@@ -446,7 +448,7 @@ for epoch_i in range(0, num_train_epochs):
             elapsed = format_time(time.time() - t0)
             
             # Report progress.
-            print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+            print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed), file=f)
 
         # Unpack this training batch from our dataloader. 
         b_input_ids = batch[0].to(device)
@@ -553,18 +555,18 @@ for epoch_i in range(0, num_train_epochs):
     # Measure how long this epoch took.
     training_time = format_time(time.time() - t0)
 
-    print("")
-    print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
-    print("  Training epcoh took: {:}".format(training_time))
+    print("", file=f)
+    print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g), file=f)
+    print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d), file=f)
+    print("  Training epcoh took: {:}".format(training_time), file=f)
         
     # ========================================
     #     TEST ON THE EVALUATION DATASET
     # ========================================
     # After the completion of each training epoch, measure our performance on
     # our test set.
-    print("")
-    print("Running Test...")
+    print("", file=f)
+    print("Running Test...", file=f)
 
     t0 = time.time()
 
@@ -615,8 +617,8 @@ for epoch_i in range(0, num_train_epochs):
     all_labels_ids = torch.stack(all_labels_ids).numpy()
     test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
     test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-    print("  Test Accuracy: {0:.3f}".format(test_accuracy))
-    print("  Test F1: {0:.3f}".format(test_f1))
+    print("  Test Accuracy: {0:.3f}".format(test_accuracy), file=f)
+    print("  Test F1: {0:.3f}".format(test_f1), file=f)
 
     # Calculate the average loss over all of the batches.
     avg_test_loss = total_test_loss / len(test_dataloader)
@@ -625,8 +627,8 @@ for epoch_i in range(0, num_train_epochs):
     # Measure how long the validation run took.
     test_time = format_time(time.time() - t0)
     
-    print("  Test Loss: {0:.3f}".format(avg_test_loss))
-    print("  Test took: {:}".format(test_time))
+    print("  Test Loss: {0:.3f}".format(avg_test_loss), file=f)
+    print("  Test took: {:}".format(test_time), file=f)
 
     # Record all statistics from this epoch.
     training_stats.append(
@@ -645,28 +647,28 @@ for epoch_i in range(0, num_train_epochs):
 
 
 for stat in training_stats:
-  print(stat)
+  print(stat, file=f)
 
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-print(confusion_matrix)
+print(confusion_matrix, file=f)
 
-print("\nTraining complete!")
+print("\nTraining complete!", file=f)
 
-print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)), file=f)
 
 
-print(" Evaluating Original Test Data Without Cleaning")
+print(" Evaluating Original Test Data Without Cleaning", file=f)
 
 
 # ==============ADDED CELL ==== NOT CLEANED TEST SET ==========================
     #     TEST ON THE  UN-CLEANED EVALUATION DATASET
     # ========================================
     # ORIGINAL TEST SET NOT CLEANED.
-print("")
-print("Running Test...")
+print("", file=f)
+print("Running Test...", file=f)
 
 t0 = time.time()
 
@@ -717,8 +719,8 @@ all_preds = torch.stack(all_preds).numpy()
 all_labels_ids = torch.stack(all_labels_ids).numpy()
 test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
 test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-print(" Original Test not cleaned - Accuracy: {0:.3f}".format(test_accuracy))
-print(" Original Test not cleaned - F1: {0:.3f}".format(test_f1))
+print(" Original Test not cleaned - Accuracy: {0:.3f}".format(test_accuracy), file=f)
+print(" Original Test not cleaned - F1: {0:.3f}".format(test_f1), file=f)
 
 # Calculate the average loss over all of the batches.
 avg_test_loss = total_test_loss / len(test_dataloader)
@@ -727,15 +729,16 @@ avg_test_loss = avg_test_loss.item()
 # Measure how long the validation run took.
 test_time = format_time(time.time() - t0)
 
-print(" Original Test not cleaned - Loss: {0:.3f}".format(avg_test_loss))
-print(" Original Test not cleaned - Loss took: {:}".format(test_time))
+print(" Original Test not cleaned - Loss: {0:.3f}".format(avg_test_loss), file=f)
+print(" Original Test not cleaned - Loss took: {:}".format(test_time), file=f)
 
-print(all_preds)
-print(all_labels_ids)
+print(all_preds, file=f)
+print(all_labels_ids, file=f)
 label_list[all_preds[0]]
 
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-print(confusion_matrix)
+print(confusion_matrix, file=f)
+f.close()
