@@ -1,0 +1,15 @@
+pip install transformers==4.3.2
+
+mkdir data
+
+gdown --id 1Jr6pnHMLklIr7jJdpxSJ-kIxsaJ79b_F 
+gdown --id 1kY7qOXMSYJK-FbImAiTByov_ICFwB_BI 
+gdown --id 1z1Cb5JBFlUi8Fr6C5w_4z404kV6qZxY8 
+gdown --id 1DPf3KGD29-RBV7TB2BoLP3y86kYJHQZU 
+gdown --id 1UJ3hu8DbO-JhgE_60tPs1unehONArE3M 
+
+mv qadi-train.tsv data
+mv qadi-test.tsv data
+mv unlabeled.tsv data
+mv unlabeled-cleaned-sampled.tsv data
+mv qadi-test-not-cleaned.tsv data
