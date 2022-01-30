@@ -648,6 +648,14 @@ for epoch_i in range(0, num_train_epochs):
     file.write("  Test took: {:}".format(test_time))
     file.write("\n")
     file.flush()
+
+    confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+    for i in range (len(all_preds)):
+      confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+    file.write("Confusion Matrix after epoch completion: \n")
+    file.write(str(confusion_matrix))
+    file.write("\n")
+
     # Record all statistics from this epoch.
     training_stats.append(
         {
@@ -665,15 +673,15 @@ for epoch_i in range(0, num_train_epochs):
 
 
 for stat in training_stats:
-  file.write(stat)
+  file.write(str(stat))
   file.write("\n")
 
-confusion_matrix = np.zeros((19, 19), dtype=np.int16)
-for i in range (len(all_preds)):
-    confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+# confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+# for i in range (len(all_preds)):
+#     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-file.write(confusion_matrix)
-file.write("\n")
+# file.write(str(confusion_matrix))
+# file.write("\n")
 
 file.write("\nTraining complete!")
 file.write("\n")
@@ -770,8 +778,8 @@ label_list[all_preds[0]]
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-
-file.write(confusion_matrix)
+file.write("Confusion matrix of original test data (no cleaning): \n")
+file.write(str(confusion_matrix))
 file.write("\n")
 file.flush()
 file.close()
