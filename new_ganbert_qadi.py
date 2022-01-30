@@ -43,7 +43,7 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 40
+max_seq_length = 80
 batch_size = 64
 # batch_size = 64
 
@@ -71,7 +71,7 @@ apply_balance = False
 learning_rate_discriminator = 5e-5
 learning_rate_generator = 5e-5
 epsilon = 1e-8
-num_train_epochs = 15
+num_train_epochs = 25
 multi_gpu = True
 # Scheduler
 apply_scheduler = False
