@@ -43,8 +43,8 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 80
-batch_size = 64
+max_seq_length = 40
+batch_size = 32
 # batch_size = 64
 
 #--------------------------------
@@ -71,13 +71,24 @@ apply_balance = False
 learning_rate_discriminator = 5e-5
 learning_rate_generator = 5e-5
 epsilon = 1e-8
-num_train_epochs = 25
+num_train_epochs = 20
 multi_gpu = True
 # Scheduler
 apply_scheduler = False
 warmup_proportion = 0.1
 # Print
 print_each_n_step = 50
+
+#--------------------------------
+#  My parameters
+#--------------------------------
+dev_set_ratio = 0.1
+unlabeled_examples_limit = 50000
+bert_checkpoint_path = 'bert-checkpoint.pt'
+discriminator_checkpoint_path = 'disc-checkpoint.pt'
+generator_checkpoint_path = 'generator-checkpoint.pt'
+early_stopping_patience = 4
+
 
 #--------------------------------
 #  Adopted Tranformer model
@@ -169,27 +180,23 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 
 # """Function required to load the dataset"""
 
-def get_qc_examples(input_file):
+def get_qc_examples(input_file, limit = -1):
   # """Creates examples for the training and dev sets."""
   examples = []
-
+  count = 0
   with open(input_file, 'r') as f:
       contents = f.read()
       file_as_list = contents.splitlines()
       for line in file_as_list[1:]:
-          # split = line.split(" ")
-          # question = ' '.join(split[1:])
+        count = count + 1
+        if limit != -1 and count > limit:
+          break
+        split = line.split("\t")
+        question = split[1]
 
-          # text_a = question
-          # inn_split = split[0].split(":")
-          # label = inn_split[0] + "_" + inn_split[1]
-
-          split = line.split("\t")
-          question = split[1]
-
-          text_a = question
-          label = split[0]
-          examples.append((text_a, label))
+        text_a = question
+        label = split[0]
+        examples.append((text_a, label))
       f.close()
 
   return examples
@@ -198,7 +205,12 @@ def get_qc_examples(input_file):
 
 #Load the examples
 labeled_examples = get_qc_examples(labeled_file)
-unlabeled_examples = get_qc_examples(unlabeled_file)
+unlabeled_examples = get_qc_examples(unlabeled_file, unlabeled_examples_limit)
+
+##Sample dev set from training set randomly (with removal)
+dev_size = math.floor(dev_set_ratio * len(labeled_examples))
+dev_examples = [labeled_examples.pop(random.randrange(len(labeled_examples))) for _ in range(dev_size)]
+
 test_examples = get_qc_examples(test_filename)
 test_nc_examples = get_qc_examples(test_filename_nc)
 
@@ -301,6 +313,13 @@ if unlabeled_examples:
   train_label_masks = np.concatenate([train_label_masks,tmp_masks])
 
 train_dataloader = generate_data_loader(train_examples, train_label_masks, label_map, do_shuffle = True, balance_label_examples = apply_balance)
+
+#------------------------------
+#   Load the dev dataset
+#------------------------------
+#The labeled (dev) dataset is assigned with a mask set to True
+dev_label_masks = np.ones(len(dev_examples), dtype=bool)
+dev_dataloader = generate_data_loader(dev_examples, dev_label_masks, label_map, do_shuffle = False, balance_label_examples = False)
 
 #------------------------------
 #   Load the test dataset
@@ -420,7 +439,111 @@ if apply_scheduler:
   scheduler_g = get_constant_schedule_with_warmup(gen_optimizer, 
                                            num_warmup_steps = num_warmup_steps)
 
+import signal
+import sys
+
+
+def evaluate_on_tes_set():
+  file.write("")
+  file.write("\n")
+  file.write("Running Test...")
+  file.write("\n")
+
+  t0 = time.time()
+
+  transformer.load_state_dict(torch.load(bert_checkpoint_path))
+  discriminator.load_state_dict(torch.load(discriminator_checkpoint_path))
+  generator.load_state_dict(torch.load(generator_checkpoint_path))
+
+  # Put the model in evaluation mode--the dropout layers behave differently
+  # during evaluation.
+  transformer.eval() #maybe redundant
+  discriminator.eval()
+  generator.eval()
+
+  # Tracking variables 
+  total_test_accuracy = 0
+
+  total_test_loss = 0
+  nb_test_steps = 0
+
+  all_preds = []
+  all_labels_ids = []
+
+  #loss
+  nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
+
+  # Evaluate data for one epoch
+  for batch in test_dataloader:
+      
+      # Unpack this training batch from our dataloader. 
+      b_input_ids = batch[0].to(device)
+      b_input_mask = batch[1].to(device)
+      b_labels = batch[2].to(device)
+      
+      # Tell pytorch not to bother with constructing the compute graph during
+      # the forward pass, since this is only needed for backprop (training).
+      with torch.no_grad():        
+          model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+          hidden_states = model_outputs[-1]
+          _, logits, probs = discriminator(hidden_states)
+          ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
+          filtered_logits = logits[:,0:-1]
+          # Accumulate the test loss.
+          total_test_loss += nll_loss(filtered_logits, b_labels)
+          
+      # Accumulate the predictions and the input labels
+      _, preds = torch.max(filtered_logits, 1)
+      all_preds += preds.detach().cpu()
+      all_labels_ids += b_labels.detach().cpu()
+
+  # Report the final accuracy for this validation run.
+  all_preds = torch.stack(all_preds).numpy()
+  all_labels_ids = torch.stack(all_labels_ids).numpy()
+  test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
+  test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
+  file.write("  Test Accuracy: {0:.3f}".format(test_accuracy))
+  file.write("\n")
+  file.write("  Test F1: {0:.3f}".format(test_f1))
+  file.write("\n")
+
+  # Calculate the average loss over all of the batches.
+  avg_test_loss = total_test_loss / len(test_dataloader)
+  avg_test_loss = avg_test_loss.item()
+
+  # Measure how long the validation run took.
+  test_time = format_time(time.time() - t0)
+
+  file.write(" Test Loss: {0:.3f}".format(avg_test_loss))
+  file.write("\n")
+  file.write(" Test Loss took: {:}".format(test_time))
+  file.write("\n")
+
+  # file.write(all_preds)
+  # file.write("\n")
+  # file.write(all_labels_ids)
+  # file.write("\n")
+  label_list[all_preds[0]]
+
+  confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+  for i in range (len(all_preds)):
+    confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+  file.write("Confusion matrix against test data: \n")
+  file.write(str(confusion_matrix))
+  file.write("\n")
+  file.flush()
+
+def signal_handler(signal, frame):
+  file.write('You pressed Ctrl+C - or killed me with -2 \n')
+  file.write('Evaluating on test data ...')
+  evaluate_on_tes_set()
+  sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 # For each epoch...
+early_stopping_count = 0
+best_dev_f1 = 0
 for epoch_i in range(0, num_train_epochs):
     # ========================================
     #               Training
@@ -579,7 +702,7 @@ for epoch_i in range(0, num_train_epochs):
     # After the completion of each training epoch, measure our performance on
     # our test set.
     file.write("")
-    file.write("Running Test...")
+    file.write("Running Evaluation on DEV set...")
     file.write("\n")
 
     t0 = time.time()
@@ -603,7 +726,7 @@ for epoch_i in range(0, num_train_epochs):
     nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
 
     # Evaluate data for one epoch
-    for batch in test_dataloader:
+    for batch in dev_dataloader:
         
         # Unpack this training batch from our dataloader. 
         b_input_ids = batch[0].to(device)
@@ -629,11 +752,11 @@ for epoch_i in range(0, num_train_epochs):
     # Report the final accuracy for this validation run.
     all_preds = torch.stack(all_preds).numpy()
     all_labels_ids = torch.stack(all_labels_ids).numpy()
-    test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
-    test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-    file.write("  Test Accuracy: {0:.3f}".format(test_accuracy))
+    dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
+    dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
+    file.write("  Validation Accuracy: {0:.3f}".format(dev_accuracy))
     file.write("\n")
-    file.write("  Test F1: {0:.3f}".format(test_f1))
+    file.write("  Validation F1: {0:.3f}".format(dev_f1))
     file.write("\n")
 
     # Calculate the average loss over all of the batches.
@@ -642,17 +765,31 @@ for epoch_i in range(0, num_train_epochs):
     
     # Measure how long the validation run took.
     test_time = format_time(time.time() - t0)
-    
-    file.write("  Test Loss: {0:.3f}".format(avg_test_loss))
+
+    if dev_f1 > best_dev_f1:
+      file.write("Best Dev f1 improved from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+
+      best_dev_f1 = dev_f1
+      early_stopping_count = 0
+      #SAVE the best models
+      torch.save(transformer.state_dict(), bert_checkpoint_path)
+      torch.save(discriminator.state_dict(), discriminator_checkpoint_path)
+      torch.save(generator.state_dict(), generator_checkpoint_path)
+    else:
+      file.write("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+      early_stopping_count = early_stopping_count + 1
+      file.write("Increasing early stopping count to {}\n".format(early_stopping_count))
+  
+    file.write("  Validation Loss: {0:.3f}".format(avg_test_loss))
     file.write("\n")
-    file.write("  Test took: {:}".format(test_time))
+    file.write("  Validation took: {:}".format(test_time))
     file.write("\n")
     file.flush()
 
     confusion_matrix = np.zeros((19, 19), dtype=np.int16)
     for i in range (len(all_preds)):
       confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-    file.write("Confusion Matrix after epoch completion: \n")
+    file.write("DEV Confusion Matrix after epoch completion: \n")
     file.write(str(confusion_matrix))
     file.write("\n")
 
@@ -663,13 +800,17 @@ for epoch_i in range(0, num_train_epochs):
             'Training Loss generator': avg_train_loss_g,
             'Training Loss discriminator': avg_train_loss_d,
             'Valid. Loss': avg_test_loss,
-            'Valid. Accur.': test_accuracy,
-            'Test F1': test_f1,
-            'Test. Accur.': test_accuracy,
+            'Valid. Accur.': dev_accuracy,
+            'Valid F1': dev_f1,
+            'Valid. Accur.': dev_accuracy,
             'Training Time': training_time,
-            'Test Time': test_time
+            'Valid Time': test_time
         }
     )
+
+    if early_stopping_count > early_stopping_patience:
+      file.write("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
+      break
 
 
 for stat in training_stats:
@@ -694,92 +835,8 @@ file.write(" Evaluating Original Test Data Without Cleaning")
 file.write("\n")
 file.flush()
 
-# ==============ADDED CELL ==== NOT CLEANED TEST SET ==========================
-    #     TEST ON THE  UN-CLEANED EVALUATION DATASET
+# ==============ADDED CELL TEST SET ==========================
+    #     TEST ON THE  TEST DATASET
     # ========================================
-    # ORIGINAL TEST SET NOT CLEANED.
-file.write("")
-file.write("\n")
-file.write("Running Test...")
-file.write("\n")
-
-t0 = time.time()
-
-# Put the model in evaluation mode--the dropout layers behave differently
-# during evaluation.
-transformer.eval() #maybe redundant
-discriminator.eval()
-generator.eval()
-
-# Tracking variables 
-total_test_accuracy = 0
-
-total_test_loss = 0
-nb_test_steps = 0
-
-all_preds = []
-all_labels_ids = []
-
-#loss
-nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
-
-# Evaluate data for one epoch
-for batch in test_nc_dataloader:
-    
-    # Unpack this training batch from our dataloader. 
-    b_input_ids = batch[0].to(device)
-    b_input_mask = batch[1].to(device)
-    b_labels = batch[2].to(device)
-    
-    # Tell pytorch not to bother with constructing the compute graph during
-    # the forward pass, since this is only needed for backprop (training).
-    with torch.no_grad():        
-        model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-        hidden_states = model_outputs[-1]
-        _, logits, probs = discriminator(hidden_states)
-        ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
-        filtered_logits = logits[:,0:-1]
-        # Accumulate the test loss.
-        total_test_loss += nll_loss(filtered_logits, b_labels)
-        
-    # Accumulate the predictions and the input labels
-    _, preds = torch.max(filtered_logits, 1)
-    all_preds += preds.detach().cpu()
-    all_labels_ids += b_labels.detach().cpu()
-
-# Report the final accuracy for this validation run.
-all_preds = torch.stack(all_preds).numpy()
-all_labels_ids = torch.stack(all_labels_ids).numpy()
-test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
-test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-file.write(" Original Test not cleaned - Accuracy: {0:.3f}".format(test_accuracy))
-file.write("\n")
-file.write(" Original Test not cleaned - F1: {0:.3f}".format(test_f1))
-file.write("\n")
-
-# Calculate the average loss over all of the batches.
-avg_test_loss = total_test_loss / len(test_dataloader)
-avg_test_loss = avg_test_loss.item()
-
-# Measure how long the validation run took.
-test_time = format_time(time.time() - t0)
-
-file.write(" Original Test not cleaned - Loss: {0:.3f}".format(avg_test_loss))
-file.write("\n")
-file.write(" Original Test not cleaned - Loss took: {:}".format(test_time))
-file.write("\n")
-
-file.write(all_preds)
-file.write("\n")
-file.write(all_labels_ids)
-file.write("\n")
-label_list[all_preds[0]]
-
-confusion_matrix = np.zeros((19, 19), dtype=np.int16)
-for i in range (len(all_preds)):
-    confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-file.write("Confusion matrix of original test data (no cleaning): \n")
-file.write(str(confusion_matrix))
-file.write("\n")
-file.flush()
+evaluate_on_tes_set()
 file.close()
