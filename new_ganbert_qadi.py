@@ -71,7 +71,7 @@ apply_balance = False
 learning_rate_discriminator = 5e-5
 learning_rate_generator = 5e-5
 epsilon = 1e-8
-num_train_epochs = 20
+num_train_epochs = 15
 multi_gpu = True
 # Scheduler
 apply_scheduler = False
@@ -86,7 +86,7 @@ dev_set_ratio = 0.1
 unlabeled_examples_limit = 50000
 bert_checkpoint_path = 'bert-checkpoint.pt'
 discriminator_checkpoint_path = 'disc-checkpoint.pt'
-generator_checkpoint_path = 'generator-checkpoint.pt'
+# generator_checkpoint_path = 'generator-checkpoint.pt'
 early_stopping_patience = 4
 
 
@@ -151,7 +151,7 @@ test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
 # unlabeled_file = "./data/unlabeled-sampled.tsv"
 # test_filename = "./data/qadi-test-sampled.tsv"
 
-label_list = ['UNK_UNK','Algeria', 'Bahrain', 'Egypt', 'Iraq', 'Jordan', 'Kuwait', 'Lebanon', 'Libya', 'Morocco', 'Oman', 'Palestine', 'Qatar', 'Saudi_Arabia', 'Sudan', 'Syria', 'Tunisia', 'United_Arab_Emirates', 'Yemen']
+label_list = ['Algeria', 'Bahrain', 'Egypt', 'Iraq', 'Jordan', 'Kuwait', 'Lebanon', 'Libya', 'Morocco', 'Oman', 'Palestine', 'Qatar', 'Saudi_Arabia', 'Sudan', 'Syria', 'Tunisia', 'United_Arab_Emirates', 'Yemen']
 
 # ! git clone https://github.com/crux82/ganbert
 
@@ -205,7 +205,7 @@ def get_qc_examples(input_file, limit = -1):
 
 #Load the examples
 labeled_examples = get_qc_examples(labeled_file)
-unlabeled_examples = get_qc_examples(unlabeled_file, unlabeled_examples_limit)
+# unlabeled_examples = get_qc_examples(unlabeled_file, unlabeled_examples_limit)
 
 ##Sample dev set from training set randomly (with removal)
 dev_size = math.floor(dev_set_ratio * len(labeled_examples))
@@ -306,11 +306,11 @@ train_examples = labeled_examples
 #The labeled (train) dataset is assigned with a mask set to True
 train_label_masks = np.ones(len(labeled_examples), dtype=bool)
 #If unlabel examples are available
-if unlabeled_examples:
-  train_examples = train_examples + unlabeled_examples
-  #The unlabeled (train) dataset is assigned with a mask set to False
-  tmp_masks = np.zeros(len(unlabeled_examples), dtype=bool)
-  train_label_masks = np.concatenate([train_label_masks,tmp_masks])
+# if unlabeled_examples:
+#   train_examples = train_examples + unlabeled_examples
+#   #The unlabeled (train) dataset is assigned with a mask set to False
+#   tmp_masks = np.zeros(len(unlabeled_examples), dtype=bool)
+#   train_label_masks = np.concatenate([train_label_masks,tmp_masks])
 
 train_dataloader = generate_data_loader(train_examples, train_label_masks, label_map, do_shuffle = True, balance_label_examples = apply_balance)
 
@@ -340,20 +340,20 @@ test_nc_dataloader = generate_data_loader(test_nc_examples, test_nc_label_masks,
 #   https://www.aclweb.org/anthology/2020.acl-main.191/
 #   https://github.com/crux82/ganbert
 #------------------------------
-class Generator(nn.Module):
-    def __init__(self, noise_size=100, output_size=512, hidden_sizes=[512], dropout_rate=0.1):
-        super(Generator, self).__init__()
-        layers = []
-        hidden_sizes = [noise_size] + hidden_sizes
-        for i in range(len(hidden_sizes)-1):
-            layers.extend([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]), nn.LeakyReLU(0.2, inplace=True), nn.Dropout(dropout_rate)])
+# class Generator(nn.Module):
+#     def __init__(self, noise_size=100, output_size=512, hidden_sizes=[512], dropout_rate=0.1):
+#         super(Generator, self).__init__()
+#         layers = []
+#         hidden_sizes = [noise_size] + hidden_sizes
+#         for i in range(len(hidden_sizes)-1):
+#             layers.extend([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]), nn.LeakyReLU(0.2, inplace=True), nn.Dropout(dropout_rate)])
 
-        layers.append(nn.Linear(hidden_sizes[-1],output_size))
-        self.layers = nn.Sequential(*layers)
+#         layers.append(nn.Linear(hidden_sizes[-1],output_size))
+#         self.layers = nn.Sequential(*layers)
 
-    def forward(self, noise):
-        output_rep = self.layers(noise)
-        return output_rep
+#     def forward(self, noise):
+#         output_rep = self.layers(noise)
+#         return output_rep
 
 #------------------------------
 #   The Discriminator
@@ -387,18 +387,18 @@ class Discriminator(nn.Module):
 config = AutoConfig.from_pretrained(model_name)
 hidden_size = int(config.hidden_size)
 # Define the number and width of hidden layers
-hidden_levels_g = [hidden_size for i in range(0, num_hidden_layers_g)]
+# hidden_levels_g = [hidden_size for i in range(0, num_hidden_layers_g)]
 hidden_levels_d = [hidden_size for i in range(0, num_hidden_layers_d)]
 
 #-------------------------------------------------
 #   Instantiate the Generator and Discriminator
 #-------------------------------------------------
-generator = Generator(noise_size=noise_size, output_size=hidden_size, hidden_sizes=hidden_levels_g, dropout_rate=out_dropout_rate)
+# generator = Generator(noise_size=noise_size, output_size=hidden_size, hidden_sizes=hidden_levels_g, dropout_rate=out_dropout_rate)
 discriminator = Discriminator(input_size=hidden_size, hidden_sizes=hidden_levels_d, num_labels=len(label_list), dropout_rate=out_dropout_rate)
 
 # Put everything in the GPU if available
 if torch.cuda.is_available():    
-  generator.cuda()
+  # generator.cuda()
   discriminator.cuda()
   transformer.cuda()
   if multi_gpu:
@@ -422,11 +422,11 @@ total_t0 = time.time()
 #models parameters
 transformer_vars = [i for i in transformer.parameters()]
 d_vars = transformer_vars + [v for v in discriminator.parameters()]
-g_vars = [v for v in generator.parameters()]
+# g_vars = [v for v in generator.parameters()]
 
 #optimizer
 dis_optimizer = torch.optim.AdamW(d_vars, lr=learning_rate_discriminator)
-gen_optimizer = torch.optim.AdamW(g_vars, lr=learning_rate_generator) 
+# gen_optimizer = torch.optim.AdamW(g_vars, lr=learning_rate_generator) 
 
 #scheduler
 if apply_scheduler:
@@ -453,13 +453,13 @@ def evaluate_on_tes_set():
 
   transformer.load_state_dict(torch.load(bert_checkpoint_path))
   discriminator.load_state_dict(torch.load(discriminator_checkpoint_path))
-  generator.load_state_dict(torch.load(generator_checkpoint_path))
+  # generator.load_state_dict(torch.load(generator_checkpoint_path))
 
   # Put the model in evaluation mode--the dropout layers behave differently
   # during evaluation.
   transformer.eval() #maybe redundant
   discriminator.eval()
-  generator.eval()
+  # generator.eval()
 
   # Tracking variables 
   total_test_accuracy = 0
@@ -525,7 +525,7 @@ def evaluate_on_tes_set():
   # file.write("\n")
   label_list[all_preds[0]]
 
-  confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+  confusion_matrix = np.zeros((18, 18), dtype=np.int16)
   for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
   file.write("Confusion matrix against test data: \n")
@@ -566,7 +566,7 @@ for epoch_i in range(0, num_train_epochs):
 
     # Put the model into training mode.
     transformer.train() 
-    generator.train()
+    # generator.train()
     discriminator.train()
 
     # For each batch of training data...
@@ -597,37 +597,37 @@ for epoch_i in range(0, num_train_epochs):
         # Generate fake data that should have the same distribution of the ones
         # encoded by the transformer. 
         # First noisy input are used in input to the Generator
-        noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
+        # noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
         # Gnerate Fake data
-        gen_rep = generator(noise)
+        # gen_rep = generator(noise)
 
         # Generate the output of the Discriminator for real and fake data.
         # First, we put together the output of the tranformer and the generator
-        disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
+        # disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
         # Then, we select the output of the disciminator
-        features, logits, probs = discriminator(disciminator_input)
+        features, logits, probs = discriminator(hidden_states)
 
         # Finally, we separate the discriminator's output for the real and fake
         # data
         features_list = torch.split(features, real_batch_size)
         D_real_features = features_list[0]
-        D_fake_features = features_list[1]
+        # D_fake_features = features_list[1]
       
         logits_list = torch.split(logits, real_batch_size)
         D_real_logits = logits_list[0]
-        D_fake_logits = logits_list[1]
+        # D_fake_logits = logits_list[1]
         
         probs_list = torch.split(probs, real_batch_size)
         D_real_probs = probs_list[0]
-        D_fake_probs = probs_list[1]
+        # D_fake_probs = probs_list[1]
 
         #---------------------------------
         #  LOSS evaluation
         #---------------------------------
         # Generator's LOSS estimation
-        g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
-        g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
-        g_loss = g_loss_d + g_feat_reg
+        # g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
+        # g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
+        # g_loss = g_loss_d + g_feat_reg
   
         # Disciminator's LOSS estimation
         logits = D_real_logits[:,0:-1]
@@ -646,24 +646,24 @@ for epoch_i in range(0, num_train_epochs):
         else:
           D_L_Supervised = torch.div(torch.sum(per_example_loss.to(device)), labeled_example_count)
                  
-        D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
-        D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
-        d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
-
+        # D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
+        # D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
+        # d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
+        d_loss = D_L_Supervised
         #---------------------------------
         #  OPTIMIZATION
         #---------------------------------
         # Avoid gradient accumulation
-        gen_optimizer.zero_grad()
+        # gen_optimizer.zero_grad()
         dis_optimizer.zero_grad()
 
         # Calculate weigth updates
         # retain_graph=True is required since the underlying graph will be deleted after backward
-        g_loss.backward(retain_graph=True)
+        # g_loss.backward(retain_graph=True)
         d_loss.backward() 
         
         # Apply modifications
-        gen_optimizer.step()
+        # gen_optimizer.step()
         dis_optimizer.step()
 
         # A detail log of the individual losses
@@ -672,7 +672,7 @@ for epoch_i in range(0, num_train_epochs):
         #             g_loss_d, g_feat_reg))
 
         # Save the losses to print them later
-        tr_g_loss += g_loss.item()
+        # tr_g_loss += g_loss.item()
         tr_d_loss += d_loss.item()
 
         # Update the learning rate with the scheduler
@@ -681,7 +681,7 @@ for epoch_i in range(0, num_train_epochs):
           scheduler_g.step()
 
     # Calculate the average loss over all of the batches.
-    avg_train_loss_g = tr_g_loss / len(train_dataloader)
+    # avg_train_loss_g = tr_g_loss / len(train_dataloader)
     avg_train_loss_d = tr_d_loss / len(train_dataloader)             
     
     # Measure how long this epoch took.
@@ -689,8 +689,8 @@ for epoch_i in range(0, num_train_epochs):
 
     file.write("")
     file.write("\n")
-    file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    file.write("\n")
+    # file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
+    # file.write("\n")
     file.write("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
     file.write("\n")
     file.write("  Training epcoh took: {:}".format(training_time))
@@ -711,7 +711,7 @@ for epoch_i in range(0, num_train_epochs):
     # during evaluation.
     transformer.eval() #maybe redundant
     discriminator.eval()
-    generator.eval()
+    # generator.eval()
 
     # Tracking variables 
     total_test_accuracy = 0
@@ -774,7 +774,7 @@ for epoch_i in range(0, num_train_epochs):
       #SAVE the best models
       torch.save(transformer.state_dict(), bert_checkpoint_path)
       torch.save(discriminator.state_dict(), discriminator_checkpoint_path)
-      torch.save(generator.state_dict(), generator_checkpoint_path)
+      # torch.save(generator.state_dict(), generator_checkpoint_path)
     else:
       file.write("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
       early_stopping_count = early_stopping_count + 1
@@ -786,7 +786,7 @@ for epoch_i in range(0, num_train_epochs):
     file.write("\n")
     file.flush()
 
-    confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+    confusion_matrix = np.zeros((18, 18), dtype=np.int16)
     for i in range (len(all_preds)):
       confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
     file.write("DEV Confusion Matrix after epoch completion: \n")
@@ -797,7 +797,7 @@ for epoch_i in range(0, num_train_epochs):
     training_stats.append(
         {
             'epoch': epoch_i + 1,
-            'Training Loss generator': avg_train_loss_g,
+            # 'Training Loss generator': avg_train_loss_g,
             'Training Loss discriminator': avg_train_loss_d,
             'Valid. Loss': avg_test_loss,
             'Valid. Accur.': dev_accuracy,
