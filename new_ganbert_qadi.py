@@ -28,17 +28,16 @@ if torch.cuda.is_available():
 if torch.cuda.is_available():    
     # Tell PyTorch to use the GPU.    
     device = torch.device("cuda")
-    file.write('There are %d GPU(s) available.' % torch.cuda.device_count())
-    file.write("\n")
-    file.write('We will use the GPU:'+ torch.cuda.get_device_name(0))
-    file.write("\n")
+    print('There are %d GPU(s) available.' % torch.cuda.device_count())
+    print("\n")
+    print('We will use the GPU:'+ torch.cuda.get_device_name(0))
+    print("\n")
 # If not...
 else:
-    file.write('No GPU available, using the CPU instead.')
-    file.write("\n")
+    print('No GPU available, using the CPU instead.')
+    print("\n")
     device = torch.device("cpu")
 
-file.flush()
 #--------------------------------
 #  Transformer parameters
 #--------------------------------
@@ -404,7 +403,7 @@ if torch.cuda.is_available():
   if multi_gpu:
     transformer = torch.nn.DataParallel(transformer)
 
-# file.write(config)
+# print(config)
 
 # """Let's go with the training procedure"""
 
@@ -444,10 +443,10 @@ import sys
 
 
 def evaluate_on_tes_set():
-  file.write("")
-  file.write("\n")
-  file.write("Running Test...")
-  file.write("\n")
+  print("")
+  print("\n")
+  print("Running Test...")
+  print("\n")
 
   t0 = time.time()
 
@@ -502,10 +501,10 @@ def evaluate_on_tes_set():
   all_labels_ids = torch.stack(all_labels_ids).numpy()
   test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
   test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-  file.write("  Test Accuracy: {0:.3f}".format(test_accuracy))
-  file.write("\n")
-  file.write("  Test F1: {0:.3f}".format(test_f1))
-  file.write("\n")
+  print("  Test Accuracy: {0:.3f}".format(test_accuracy))
+  print("\n")
+  print("  Test F1: {0:.3f}".format(test_f1))
+  print("\n")
 
   # Calculate the average loss over all of the batches.
   avg_test_loss = total_test_loss / len(test_dataloader)
@@ -514,28 +513,27 @@ def evaluate_on_tes_set():
   # Measure how long the validation run took.
   test_time = format_time(time.time() - t0)
 
-  file.write(" Test Loss: {0:.3f}".format(avg_test_loss))
-  file.write("\n")
-  file.write(" Test Loss took: {:}".format(test_time))
-  file.write("\n")
+  print(" Test Loss: {0:.3f}".format(avg_test_loss))
+  print("\n")
+  print(" Test Loss took: {:}".format(test_time))
+  print("\n")
 
-  # file.write(all_preds)
-  # file.write("\n")
-  # file.write(all_labels_ids)
-  # file.write("\n")
+  # print(all_preds)
+  # print("\n")
+  # print(all_labels_ids)
+  # print("\n")
   label_list[all_preds[0]]
 
   confusion_matrix = np.zeros((18, 18), dtype=np.int16)
   for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-  file.write("Confusion matrix against test data: \n")
-  file.write(str(confusion_matrix))
-  file.write("\n")
-  file.flush()
-
+  print("Confusion matrix against test data: \n")
+  print(str(confusion_matrix))
+  print("\n")
+  
 def signal_handler(signal, frame):
-  file.write('You pressed Ctrl+C - or killed me with -2 \n')
-  file.write('Evaluating on test data ...')
+  print('You pressed Ctrl+C - or killed me with -2 \n')
+  print('Evaluating on test data ...')
   evaluate_on_tes_set()
   sys.exit(0)
 
@@ -549,14 +547,13 @@ for epoch_i in range(0, num_train_epochs):
     #               Training
     # ========================================
     # Perform one full pass over the training set.
-    file.write("")
-    file.write("\n")
-    file.write('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
-    file.write("\n")
-    file.write('Training...')
-    file.write("\n")
-    file.flush()
-
+    print("")
+    print("\n")
+    print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
+    print("\n")
+    print('Training...')
+    print("\n")
+    
     # Measure how long the training epoch takes.
     t0 = time.time()
 
@@ -578,10 +575,9 @@ for epoch_i in range(0, num_train_epochs):
             elapsed = format_time(time.time() - t0)
             
             # Report progress.
-            file.write('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
-            file.write("\n")
-            file.flush()
-
+            print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+            print("\n")
+            
         # Unpack this training batch from our dataloader. 
         b_input_ids = batch[0].to(device)
         b_input_mask = batch[1].to(device)
@@ -667,7 +663,7 @@ for epoch_i in range(0, num_train_epochs):
         dis_optimizer.step()
 
         # A detail log of the individual losses
-        #file.write("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
+        #print("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
         #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
         #             g_loss_d, g_feat_reg))
 
@@ -687,23 +683,22 @@ for epoch_i in range(0, num_train_epochs):
     # Measure how long this epoch took.
     training_time = format_time(time.time() - t0)
 
-    file.write("")
-    file.write("\n")
-    # file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    # file.write("\n")
-    file.write("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
-    file.write("\n")
-    file.write("  Training epcoh took: {:}".format(training_time))
-    file.write("\n")
-    file.flush()
-    # ========================================
+    print("")
+    print("\n")
+    # print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
+    # print("\n")
+    print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
+    print("\n")
+    print("  Training epcoh took: {:}".format(training_time))
+    print("\n")
+        # ========================================
     #     TEST ON THE EVALUATION DATASET
     # ========================================
     # After the completion of each training epoch, measure our performance on
     # our test set.
-    file.write("")
-    file.write("Running Evaluation on DEV set...")
-    file.write("\n")
+    print("")
+    print("Running Evaluation on DEV set...")
+    print("\n")
 
     t0 = time.time()
 
@@ -754,10 +749,10 @@ for epoch_i in range(0, num_train_epochs):
     all_labels_ids = torch.stack(all_labels_ids).numpy()
     dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
     dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-    file.write("  Validation Accuracy: {0:.3f}".format(dev_accuracy))
-    file.write("\n")
-    file.write("  Validation F1: {0:.3f}".format(dev_f1))
-    file.write("\n")
+    print("  Validation Accuracy: {0:.3f}".format(dev_accuracy))
+    print("\n")
+    print("  Validation F1: {0:.3f}".format(dev_f1))
+    print("\n")
 
     # Calculate the average loss over all of the batches.
     avg_test_loss = total_test_loss / len(test_dataloader)
@@ -767,7 +762,7 @@ for epoch_i in range(0, num_train_epochs):
     test_time = format_time(time.time() - t0)
 
     if dev_f1 > best_dev_f1:
-      file.write("Best Dev f1 improved from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+      print("Best Dev f1 improved from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
 
       best_dev_f1 = dev_f1
       early_stopping_count = 0
@@ -776,22 +771,21 @@ for epoch_i in range(0, num_train_epochs):
       torch.save(discriminator.state_dict(), discriminator_checkpoint_path)
       # torch.save(generator.state_dict(), generator_checkpoint_path)
     else:
-      file.write("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+      print("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
       early_stopping_count = early_stopping_count + 1
-      file.write("Increasing early stopping count to {}\n".format(early_stopping_count))
+      print("Increasing early stopping count to {}\n".format(early_stopping_count))
   
-    file.write("  Validation Loss: {0:.3f}".format(avg_test_loss))
-    file.write("\n")
-    file.write("  Validation took: {:}".format(test_time))
-    file.write("\n")
-    file.flush()
-
+    print("  Validation Loss: {0:.3f}".format(avg_test_loss))
+    print("\n")
+    print("  Validation took: {:}".format(test_time))
+    print("\n")
+    
     confusion_matrix = np.zeros((18, 18), dtype=np.int16)
     for i in range (len(all_preds)):
       confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-    file.write("DEV Confusion Matrix after epoch completion: \n")
-    file.write(str(confusion_matrix))
-    file.write("\n")
+    print("DEV Confusion Matrix after epoch completion: \n")
+    print(str(confusion_matrix))
+    print("\n")
 
     # Record all statistics from this epoch.
     training_stats.append(
@@ -809,31 +803,30 @@ for epoch_i in range(0, num_train_epochs):
     )
 
     if early_stopping_count > early_stopping_patience:
-      file.write("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
+      print("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
       break
 
 
 for stat in training_stats:
-  file.write(str(stat))
-  file.write("\n")
+  print(str(stat))
+  print("\n")
 
 # confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 # for i in range (len(all_preds)):
 #     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-# file.write(str(confusion_matrix))
-# file.write("\n")
+# print(str(confusion_matrix))
+# print("\n")
 
-file.write("\nTraining complete!")
-file.write("\n")
+print("\nTraining complete!")
+print("\n")
 
-file.write("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
-file.write("\n")
+print("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
+print("\n")
 
 
-file.write(" Evaluating Original Test Data Without Cleaning")
-file.write("\n")
-file.flush()
+print(" Evaluating Original Test Data Without Cleaning")
+print("\n")
 
 # ==============ADDED CELL TEST SET ==========================
     #     TEST ON THE  TEST DATASET
