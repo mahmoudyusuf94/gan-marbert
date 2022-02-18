@@ -184,19 +184,19 @@ def get_qc_examples(input_file, limit = -1):
   examples = []
   count = 0
   with open(input_file, 'r') as f:
-      contents = f.read()
-      file_as_list = contents.splitlines()
-      for line in file_as_list[1:]:
-        count = count + 1
-        if limit != -1 and count > limit:
-          break
-        split = line.split("\t")
-        question = split[1]
+    contents = f.read()
+    file_as_list = contents.splitlines()
+    for line in file_as_list[1:]:
+      count = count + 1
+      if limit != -1 and count > limit:
+        break
+      split = line.split("\t")
+      question = split[1]
 
-        text_a = question
-        label = split[0]
-        examples.append((text_a, label))
-      f.close()
+      text_a = question
+      label = split[0]
+      examples.append((text_a, label))
+    f.close()
 
   return examples
 
@@ -285,13 +285,13 @@ def generate_data_loader(input_examples, label_masks, label_map, do_shuffle = Fa
               batch_size = batch_size) # Trains with this batch size.
 
 def format_time(elapsed):
-    # '''
-    # Takes a time in seconds and returns a string hh:mm:ss
-    # '''
-    # Round to the nearest second.
-    elapsed_rounded = int(round((elapsed)))
-    # Format as hh:mm:ss
-    return str(datetime.timedelta(seconds=elapsed_rounded))
+  # '''
+  # Takes a time in seconds and returns a string hh:mm:ss
+  # '''
+  # Round to the nearest second.
+  elapsed_rounded = int(round((elapsed)))
+  # Format as hh:mm:ss
+  return str(datetime.timedelta(seconds=elapsed_rounded))
 
 # """Convert the input examples into DataLoader"""
 
@@ -360,24 +360,24 @@ test_nc_dataloader = generate_data_loader(test_nc_examples, test_nc_label_masks,
 #   https://github.com/crux82/ganbert
 #------------------------------
 class Discriminator(nn.Module):
-    def __init__(self, input_size=512, hidden_sizes=[512], num_labels=2, dropout_rate=0.1):
-        super(Discriminator, self).__init__()
-        self.input_dropout = nn.Dropout(p=dropout_rate)
-        layers = []
-        hidden_sizes = [input_size] + hidden_sizes
-        for i in range(len(hidden_sizes)-1):
-            layers.extend([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]), nn.LeakyReLU(0.2, inplace=True), nn.Dropout(dropout_rate)])
+  def __init__(self, input_size=512, hidden_sizes=[512], num_labels=2, dropout_rate=0.1):
+      super(Discriminator, self).__init__()
+      self.input_dropout = nn.Dropout(p=dropout_rate)
+      layers = []
+      hidden_sizes = [input_size] + hidden_sizes
+      for i in range(len(hidden_sizes)-1):
+          layers.extend([nn.Linear(hidden_sizes[i], hidden_sizes[i+1]), nn.LeakyReLU(0.2, inplace=True), nn.Dropout(dropout_rate)])
 
-        self.layers = nn.Sequential(*layers) #per il flatten
-        self.logit = nn.Linear(hidden_sizes[-1],num_labels+1) # +1 for the probability of this sample being fake/real.
-        self.softmax = nn.Softmax(dim=-1)
+      self.layers = nn.Sequential(*layers) #per il flatten
+      self.logit = nn.Linear(hidden_sizes[-1],num_labels+1) # +1 for the probability of this sample being fake/real.
+      self.softmax = nn.Softmax(dim=-1)
 
-    def forward(self, input_rep):
-        input_rep = self.input_dropout(input_rep)
-        last_rep = self.layers(input_rep)
-        logits = self.logit(last_rep)
-        probs = self.softmax(logits)
-        return last_rep, logits, probs
+  def forward(self, input_rep):
+      input_rep = self.input_dropout(input_rep)
+      last_rep = self.layers(input_rep)
+      logits = self.logit(last_rep)
+      probs = self.softmax(logits)
+      return last_rep, logits, probs
 
 # """We instantiate the Discriminator and Generator"""
 
@@ -474,27 +474,27 @@ def evaluate_on_tes_set():
 
   # Evaluate data for one epoch
   for batch in test_dataloader:
-      
-      # Unpack this training batch from our dataloader. 
-      b_input_ids = batch[0].to(device)
-      b_input_mask = batch[1].to(device)
-      b_labels = batch[2].to(device)
-      
-      # Tell pytorch not to bother with constructing the compute graph during
-      # the forward pass, since this is only needed for backprop (training).
-      with torch.no_grad():        
-          model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-          hidden_states = model_outputs[-1]
-          _, logits, probs = discriminator(hidden_states)
-          ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
-          filtered_logits = logits[:,0:-1]
-          # Accumulate the test loss.
-          total_test_loss += nll_loss(filtered_logits, b_labels)
-          
-      # Accumulate the predictions and the input labels
-      _, preds = torch.max(filtered_logits, 1)
-      all_preds += preds.detach().cpu()
-      all_labels_ids += b_labels.detach().cpu()
+
+    # Unpack this training batch from our dataloader. 
+    b_input_ids = batch[0].to(device)
+    b_input_mask = batch[1].to(device)
+    b_labels = batch[2].to(device)
+    
+    # Tell pytorch not to bother with constructing the compute graph during
+    # the forward pass, since this is only needed for backprop (training).
+    with torch.no_grad():        
+      model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+      hidden_states = model_outputs[-1]
+      _, logits, probs = discriminator(hidden_states)
+      ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
+      filtered_logits = logits[:,0:-1]
+      # Accumulate the test loss.
+      total_test_loss += nll_loss(filtered_logits, b_labels)
+
+    # Accumulate the predictions and the input labels
+    _, preds = torch.max(filtered_logits, 1)
+    all_preds += preds.detach().cpu()
+    all_labels_ids += b_labels.detach().cpu()
 
   # Report the final accuracy for this validation run.
   all_preds = torch.stack(all_preds).numpy()
@@ -543,268 +543,267 @@ signal.signal(signal.SIGINT, signal_handler)
 early_stopping_count = 0
 best_dev_f1 = 0
 for epoch_i in range(0, num_train_epochs):
-    # ========================================
-    #               Training
-    # ========================================
-    # Perform one full pass over the training set.
-    print("")
-    print("\n")
-    print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
-    print("\n")
-    print('Training...')
-    print("\n")
-    
-    # Measure how long the training epoch takes.
-    t0 = time.time()
+  # ========================================
+  #               Training
+  # ========================================
+  # Perform one full pass over the training set.
+  print("")
+  print("\n")
+  print('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
+  print("\n")
+  print('Training...')
+  print("\n")
+  
+  # Measure how long the training epoch takes.
+  t0 = time.time()
 
-    # Reset the total loss for this epoch.
-    tr_g_loss = 0
-    tr_d_loss = 0
+  # Reset the total loss for this epoch.
+  tr_g_loss = 0
+  tr_d_loss = 0
 
-    # Put the model into training mode.
-    transformer.train() 
-    # generator.train()
-    discriminator.train()
+  # Put the model into training mode.
+  transformer.train() 
+  # generator.train()
+  discriminator.train()
 
-    # For each batch of training data...
-    for step, batch in enumerate(train_dataloader):
+  # For each batch of training data...
+  for step, batch in enumerate(train_dataloader):
 
-        # Progress update every print_each_n_step batches.
-        if step % print_each_n_step == 0 and not step == 0:
-            # Calculate elapsed time in minutes.
-            elapsed = format_time(time.time() - t0)
-            
-            # Report progress.
-            print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
-            print("\n")
-            
-        # Unpack this training batch from our dataloader. 
-        b_input_ids = batch[0].to(device)
-        b_input_mask = batch[1].to(device)
-        b_labels = batch[2].to(device)
-        b_label_mask = batch[3].to(device)
-
-        real_batch_size = b_input_ids.shape[0]
-     
-        # Encode real data in the Transformer
-        model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-        hidden_states = model_outputs[-1]
-        
-        # Generate fake data that should have the same distribution of the ones
-        # encoded by the transformer. 
-        # First noisy input are used in input to the Generator
-        # noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
-        # Gnerate Fake data
-        # gen_rep = generator(noise)
-
-        # Generate the output of the Discriminator for real and fake data.
-        # First, we put together the output of the tranformer and the generator
-        # disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
-        # Then, we select the output of the disciminator
-        features, logits, probs = discriminator(hidden_states)
-
-        # Finally, we separate the discriminator's output for the real and fake
-        # data
-        features_list = torch.split(features, real_batch_size)
-        D_real_features = features_list[0]
-        # D_fake_features = features_list[1]
+    # Progress update every print_each_n_step batches.
+    if step % print_each_n_step == 0 and not step == 0:
+      # Calculate elapsed time in minutes.
+      elapsed = format_time(time.time() - t0)
       
-        logits_list = torch.split(logits, real_batch_size)
-        D_real_logits = logits_list[0]
-        # D_fake_logits = logits_list[1]
+      # Report progress.
+      print('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+      print("\n")
         
-        probs_list = torch.split(probs, real_batch_size)
-        D_real_probs = probs_list[0]
-        # D_fake_probs = probs_list[1]
+    # Unpack this training batch from our dataloader. 
+    b_input_ids = batch[0].to(device)
+    b_input_mask = batch[1].to(device)
+    b_labels = batch[2].to(device)
+    b_label_mask = batch[3].to(device)
 
-        #---------------------------------
-        #  LOSS evaluation
-        #---------------------------------
-        # Generator's LOSS estimation
-        # g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
-        # g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
-        # g_loss = g_loss_d + g_feat_reg
+    real_batch_size = b_input_ids.shape[0]
   
-        # Disciminator's LOSS estimation
-        logits = D_real_logits[:,0:-1]
-        log_probs = F.log_softmax(logits, dim=-1)
-        # The discriminator provides an output for labeled and unlabeled real data
-        # so the loss evaluated for unlabeled data is ignored (masked)
-        label2one_hot = torch.nn.functional.one_hot(b_labels, len(label_list))
-        per_example_loss = -torch.sum(label2one_hot * log_probs, dim=-1)
-        per_example_loss = torch.masked_select(per_example_loss, b_label_mask.to(device))
-        labeled_example_count = per_example_loss.type(torch.float32).numel()
-
-        # It may be the case that a batch does not contain labeled examples, 
-        # so the "supervised loss" in this case is not evaluated
-        if labeled_example_count == 0:
-          D_L_Supervised = 0
-        else:
-          D_L_Supervised = torch.div(torch.sum(per_example_loss.to(device)), labeled_example_count)
-                 
-        # D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
-        # D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
-        # d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
-        d_loss = D_L_Supervised
-        #---------------------------------
-        #  OPTIMIZATION
-        #---------------------------------
-        # Avoid gradient accumulation
-        # gen_optimizer.zero_grad()
-        dis_optimizer.zero_grad()
-
-        # Calculate weigth updates
-        # retain_graph=True is required since the underlying graph will be deleted after backward
-        # g_loss.backward(retain_graph=True)
-        d_loss.backward() 
-        
-        # Apply modifications
-        # gen_optimizer.step()
-        dis_optimizer.step()
-
-        # A detail log of the individual losses
-        #print("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
-        #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
-        #             g_loss_d, g_feat_reg))
-
-        # Save the losses to print them later
-        # tr_g_loss += g_loss.item()
-        tr_d_loss += d_loss.item()
-
-        # Update the learning rate with the scheduler
-        if apply_scheduler:
-          scheduler_d.step()
-          scheduler_g.step()
-
-    # Calculate the average loss over all of the batches.
-    # avg_train_loss_g = tr_g_loss / len(train_dataloader)
-    avg_train_loss_d = tr_d_loss / len(train_dataloader)             
+    # Encode real data in the Transformer
+    model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+    hidden_states = model_outputs[-1]
     
-    # Measure how long this epoch took.
-    training_time = format_time(time.time() - t0)
+    # Generate fake data that should have the same distribution of the ones
+    # encoded by the transformer. 
+    # First noisy input are used in input to the Generator
+    # noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
+    # Gnerate Fake data
+    # gen_rep = generator(noise)
 
-    print("")
-    print("\n")
-    # print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    # print("\n")
-    print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
-    print("\n")
-    print("  Training epcoh took: {:}".format(training_time))
-    print("\n")
-        # ========================================
-    #     TEST ON THE EVALUATION DATASET
-    # ========================================
-    # After the completion of each training epoch, measure our performance on
-    # our test set.
-    print("")
-    print("Running Evaluation on DEV set...")
-    print("\n")
+    # Generate the output of the Discriminator for real and fake data.
+    # First, we put together the output of the tranformer and the generator
+    # disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
+    # Then, we select the output of the disciminator
+    features, logits, probs = discriminator(hidden_states)
 
-    t0 = time.time()
-
-    # Put the model in evaluation mode--the dropout layers behave differently
-    # during evaluation.
-    transformer.eval() #maybe redundant
-    discriminator.eval()
-    # generator.eval()
-
-    # Tracking variables 
-    total_test_accuracy = 0
-   
-    total_test_loss = 0
-    nb_test_steps = 0
-
-    all_preds = []
-    all_labels_ids = []
-
-    #loss
-    nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
-
-    # Evaluate data for one epoch
-    for batch in dev_dataloader:
-        
-        # Unpack this training batch from our dataloader. 
-        b_input_ids = batch[0].to(device)
-        b_input_mask = batch[1].to(device)
-        b_labels = batch[2].to(device)
-        
-        # Tell pytorch not to bother with constructing the compute graph during
-        # the forward pass, since this is only needed for backprop (training).
-        with torch.no_grad():        
-            model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-            hidden_states = model_outputs[-1]
-            _, logits, probs = discriminator(hidden_states)
-            ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
-            filtered_logits = logits[:,0:-1]
-            # Accumulate the test loss.
-            total_test_loss += nll_loss(filtered_logits, b_labels)
-            
-        # Accumulate the predictions and the input labels
-        _, preds = torch.max(filtered_logits, 1)
-        all_preds += preds.detach().cpu()
-        all_labels_ids += b_labels.detach().cpu()
-
-    # Report the final accuracy for this validation run.
-    all_preds = torch.stack(all_preds).numpy()
-    all_labels_ids = torch.stack(all_labels_ids).numpy()
-    dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
-    dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-    print("  Validation Accuracy: {0:.3f}".format(dev_accuracy))
-    print("\n")
-    print("  Validation F1: {0:.3f}".format(dev_f1))
-    print("\n")
-
-    # Calculate the average loss over all of the batches.
-    avg_test_loss = total_test_loss / len(test_dataloader)
-    avg_test_loss = avg_test_loss.item()
+    # Finally, we separate the discriminator's output for the real and fake
+    # data
+    features_list = torch.split(features, real_batch_size)
+    D_real_features = features_list[0]
+    # D_fake_features = features_list[1]
+  
+    logits_list = torch.split(logits, real_batch_size)
+    D_real_logits = logits_list[0]
+    # D_fake_logits = logits_list[1]
     
-    # Measure how long the validation run took.
-    test_time = format_time(time.time() - t0)
+    probs_list = torch.split(probs, real_batch_size)
+    D_real_probs = probs_list[0]
+    # D_fake_probs = probs_list[1]
 
-    if dev_f1 > best_dev_f1:
-      print("Best Dev f1 improved from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+    #---------------------------------
+    #  LOSS evaluation
+    #---------------------------------
+    # Generator's LOSS estimation
+    # g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
+    # g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
+    # g_loss = g_loss_d + g_feat_reg
 
-      best_dev_f1 = dev_f1
-      early_stopping_count = 0
-      #SAVE the best models
-      torch.save(transformer.state_dict(), bert_checkpoint_path)
-      torch.save(discriminator.state_dict(), discriminator_checkpoint_path)
-      # torch.save(generator.state_dict(), generator_checkpoint_path)
+    # Disciminator's LOSS estimation
+    logits = D_real_logits[:,0:-1]
+    log_probs = F.log_softmax(logits, dim=-1)
+    # The discriminator provides an output for labeled and unlabeled real data
+    # so the loss evaluated for unlabeled data is ignored (masked)
+    label2one_hot = torch.nn.functional.one_hot(b_labels, len(label_list))
+    per_example_loss = -torch.sum(label2one_hot * log_probs, dim=-1)
+    per_example_loss = torch.masked_select(per_example_loss, b_label_mask.to(device))
+    labeled_example_count = per_example_loss.type(torch.float32).numel()
+
+    # It may be the case that a batch does not contain labeled examples, 
+    # so the "supervised loss" in this case is not evaluated
+    if labeled_example_count == 0:
+      D_L_Supervised = 0
     else:
-      print("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
-      early_stopping_count = early_stopping_count + 1
-      print("Increasing early stopping count to {}\n".format(early_stopping_count))
-  
-    print("  Validation Loss: {0:.3f}".format(avg_test_loss))
-    print("\n")
-    print("  Validation took: {:}".format(test_time))
-    print("\n")
+      D_L_Supervised = torch.div(torch.sum(per_example_loss.to(device)), labeled_example_count)
+              
+    # D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
+    # D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
+    # d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
+    d_loss = D_L_Supervised
+    #---------------------------------
+    #  OPTIMIZATION
+    #---------------------------------
+    # Avoid gradient accumulation
+    # gen_optimizer.zero_grad()
+    dis_optimizer.zero_grad()
+
+    # Calculate weigth updates
+    # retain_graph=True is required since the underlying graph will be deleted after backward
+    # g_loss.backward(retain_graph=True)
+    d_loss.backward() 
     
-    confusion_matrix = np.zeros((18, 18), dtype=np.int16)
-    for i in range (len(all_preds)):
-      confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-    print("DEV Confusion Matrix after epoch completion: \n")
-    print(str(confusion_matrix))
-    print("\n")
+    # Apply modifications
+    # gen_optimizer.step()
+    dis_optimizer.step()
 
-    # Record all statistics from this epoch.
-    training_stats.append(
-        {
-            'epoch': epoch_i + 1,
-            # 'Training Loss generator': avg_train_loss_g,
-            'Training Loss discriminator': avg_train_loss_d,
-            'Valid. Loss': avg_test_loss,
-            'Valid. Accur.': dev_accuracy,
-            'Valid F1': dev_f1,
-            'Valid. Accur.': dev_accuracy,
-            'Training Time': training_time,
-            'Valid Time': test_time
-        }
-    )
+    # A detail log of the individual losses
+    #print("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
+    #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
+    #             g_loss_d, g_feat_reg))
 
-    if early_stopping_count > early_stopping_patience:
-      print("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
-      break
+    # Save the losses to print them later
+    # tr_g_loss += g_loss.item()
+    tr_d_loss += d_loss.item()
+
+    # Update the learning rate with the scheduler
+    if apply_scheduler:
+      scheduler_d.step()
+      scheduler_g.step()
+
+  # Calculate the average loss over all of the batches.
+  # avg_train_loss_g = tr_g_loss / len(train_dataloader)
+  avg_train_loss_d = tr_d_loss / len(train_dataloader)             
+  
+  # Measure how long this epoch took.
+  training_time = format_time(time.time() - t0)
+
+  print("")
+  print("\n")
+  # print("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
+  # print("\n")
+  print("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
+  print("\n")
+  print("  Training epcoh took: {:}".format(training_time))
+  print("\n")
+      # ========================================
+  #     TEST ON THE EVALUATION DATASET
+  # ========================================
+  # After the completion of each training epoch, measure our performance on
+  # our test set.
+  print("")
+  print("Running Evaluation on DEV set...")
+  print("\n")
+
+  t0 = time.time()
+
+  # Put the model in evaluation mode--the dropout layers behave differently
+  # during evaluation.
+  transformer.eval() #maybe redundant
+  discriminator.eval()
+  # generator.eval()
+
+  # Tracking variables 
+  total_test_accuracy = 0
+  
+  total_test_loss = 0
+  nb_test_steps = 0
+
+  all_preds = []
+  all_labels_ids = []
+
+  #loss
+  nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
+
+  # Evaluate data for one epoch
+  for batch in dev_dataloader:
+    # Unpack this training batch from our dataloader. 
+    b_input_ids = batch[0].to(device)
+    b_input_mask = batch[1].to(device)
+    b_labels = batch[2].to(device)
+    
+    # Tell pytorch not to bother with constructing the compute graph during
+    # the forward pass, since this is only needed for backprop (training).
+    with torch.no_grad():        
+      model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+      hidden_states = model_outputs[-1]
+      _, logits, probs = discriminator(hidden_states)
+      ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
+      filtered_logits = logits[:,0:-1]
+      # Accumulate the test loss.
+      total_test_loss += nll_loss(filtered_logits, b_labels)
+        
+    # Accumulate the predictions and the input labels
+    _, preds = torch.max(filtered_logits, 1)
+    all_preds += preds.detach().cpu()
+    all_labels_ids += b_labels.detach().cpu()
+
+  # Report the final accuracy for this validation run.
+  all_preds = torch.stack(all_preds).numpy()
+  all_labels_ids = torch.stack(all_labels_ids).numpy()
+  dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
+  dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
+  print("  Validation Accuracy: {0:.3f}".format(dev_accuracy))
+  print("\n")
+  print("  Validation F1: {0:.3f}".format(dev_f1))
+  print("\n")
+
+  # Calculate the average loss over all of the batches.
+  avg_test_loss = total_test_loss / len(test_dataloader)
+  avg_test_loss = avg_test_loss.item()
+  
+  # Measure how long the validation run took.
+  test_time = format_time(time.time() - t0)
+
+  if dev_f1 > best_dev_f1:
+    print("Best Dev f1 improved from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+
+    best_dev_f1 = dev_f1
+    early_stopping_count = 0
+    #SAVE the best models
+    torch.save(transformer.state_dict(), bert_checkpoint_path)
+    torch.save(discriminator.state_dict(), discriminator_checkpoint_path)
+    # torch.save(generator.state_dict(), generator_checkpoint_path)
+  else:
+    print("Dev f1 degraded from {0:.3f} to {1:.3f}\n".format(best_dev_f1, dev_f1))
+    early_stopping_count = early_stopping_count + 1
+    print("Increasing early stopping count to {}\n".format(early_stopping_count))
+
+  print("  Validation Loss: {0:.3f}".format(avg_test_loss))
+  print("\n")
+  print("  Validation took: {:}".format(test_time))
+  print("\n")
+  
+  confusion_matrix = np.zeros((18, 18), dtype=np.int16)
+  for i in range (len(all_preds)):
+    confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+  print("DEV Confusion Matrix after epoch completion: \n")
+  print(str(confusion_matrix))
+  print("\n")
+
+  # Record all statistics from this epoch.
+  training_stats.append(
+      {
+          'epoch': epoch_i + 1,
+          # 'Training Loss generator': avg_train_loss_g,
+          'Training Loss discriminator': avg_train_loss_d,
+          'Valid. Loss': avg_test_loss,
+          'Valid. Accur.': dev_accuracy,
+          'Valid F1': dev_f1,
+          'Valid. Accur.': dev_accuracy,
+          'Training Time': training_time,
+          'Valid Time': test_time
+      }
+  )
+
+  if early_stopping_count > early_stopping_patience:
+    print("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
+    break
 
 
 for stat in training_stats:
