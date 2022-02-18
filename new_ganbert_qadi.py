@@ -59,7 +59,7 @@ num_hidden_layers_d = 1;
 # size of the generator's input noisy vectors
 noise_size = 100
 # dropout to be applied to discriminator's input vectors
-out_dropout_rate = 0.2
+out_dropout_rate = 0.3
 
 # Replicate labeled data to balance poorly represented datasets, 
 # e.g., less than 1% of labeled material
@@ -71,7 +71,7 @@ apply_balance = False
 learning_rate_discriminator = 5e-5
 learning_rate_generator = 5e-5
 epsilon = 1e-8
-num_train_epochs = 15
+num_train_epochs = 20
 multi_gpu = True
 # Scheduler
 apply_scheduler = False
@@ -83,11 +83,15 @@ print_each_n_step = 50
 #  My parameters
 #--------------------------------
 dev_set_ratio = 0.1
+dev_set_size = 3500
 unlabeled_examples_limit = 50000
-bert_checkpoint_path = 'bert-checkpoint.pt'
-discriminator_checkpoint_path = 'disc-checkpoint.pt'
+bert_checkpoint_path = 'bert-best-checkpoint.pt'
+discriminator_checkpoint_path = 'disc-best-checkpoint.pt'
+bert_last_checkpoint_path = 'bert-latest-checkpoint.pt'
+discriminator_last_checkpoint_path = 'disc-latest-checkpoint.pt'
+
 # generator_checkpoint_path = 'generator-checkpoint.pt'
-early_stopping_patience = 4
+early_stopping_patience = 7
 
 
 #--------------------------------
@@ -208,8 +212,8 @@ labeled_examples = get_qc_examples(labeled_file)
 # unlabeled_examples = get_qc_examples(unlabeled_file, unlabeled_examples_limit)
 
 ##Sample dev set from training set randomly (with removal)
-dev_size = math.floor(dev_set_ratio * len(labeled_examples))
-dev_examples = [labeled_examples.pop(random.randrange(len(labeled_examples))) for _ in range(dev_size)]
+# dev_size = math.floor(dev_set_ratio * len(labeled_examples))
+dev_examples = [labeled_examples.pop(random.randrange(len(labeled_examples))) for _ in range(dev_set_size)]
 
 test_examples = get_qc_examples(test_filename)
 test_nc_examples = get_qc_examples(test_filename_nc)
@@ -443,7 +447,7 @@ import signal
 import sys
 
 
-def evaluate_on_tes_set():
+def evaluate_on_tes_set(bert_path, disc_path):
   file.write("")
   file.write("\n")
   file.write("Running Test...")
@@ -451,8 +455,8 @@ def evaluate_on_tes_set():
 
   t0 = time.time()
 
-  transformer.load_state_dict(torch.load(bert_checkpoint_path))
-  discriminator.load_state_dict(torch.load(discriminator_checkpoint_path))
+  transformer.load_state_dict(torch.load(bert_path))
+  discriminator.load_state_dict(torch.load(disc_path))
   # generator.load_state_dict(torch.load(generator_checkpoint_path))
 
   # Put the model in evaluation mode--the dropout layers behave differently
@@ -807,10 +811,13 @@ for epoch_i in range(0, num_train_epochs):
             'Valid Time': test_time
         }
     )
-
+    torch.save(transformer.state_dict(), bert_last_checkpoint_path)
+    torch.save(discriminator.state_dict(), discriminator_last_checkpoint_path)
     if early_stopping_count > early_stopping_patience:
       file.write("Reached the maximum limit for early stopping patience. Breaking the training loop\n")
       break
+
+    
 
 
 for stat in training_stats:
@@ -831,12 +838,21 @@ file.write("Total training took {:} (h:mm:ss)".format(format_time(time.time()-to
 file.write("\n")
 
 
-file.write(" Evaluating Original Test Data Without Cleaning")
-file.write("\n")
-file.flush()
 
 # ==============ADDED CELL TEST SET ==========================
     #     TEST ON THE  TEST DATASET
     # ========================================
-evaluate_on_tes_set()
+file.write(" Evaluating on Test Data - Best model on DEV")
+file.write("\n")
+file.flush()
+
+evaluate_on_tes_set(bert_checkpoint_path, discriminator_checkpoint_path)
+
+file.write(" Evaluating on Test Data - Last epoch model")
+file.write("\n")
+file.flush()
+
+evaluate_on_tes_set(bert_last_checkpoint_path, discriminator_last_checkpoint_path)
+
+
 file.close()
