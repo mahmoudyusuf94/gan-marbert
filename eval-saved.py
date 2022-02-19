@@ -14,7 +14,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 #!pip install torch==1.7.1+cu101 torchvision==0.8.2+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 #!pip install sentencepiece
 
-file = open("out.txt", "w")
+file = open("out-eval.txt", "w")
 
 ##Set random values
 seed_val = 42
@@ -124,7 +124,7 @@ model_name = "UBC-NLP/MARBERT"
 
 labeled_file = "./data/qadi-train-without-dev.tsv"
 # unlabeled_file = "./data/unlabeled.tsv"
-unlabeled_file = "./data/unlabeled-cleaned-sampled.tsv"
+unlabeled_file = "./data/unlabeled-cleaned-sampled-50k.tsv"
 test_filename = "./data/qadi-test.tsv"
 test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
 dev_file_name = "./data/qadi-dev.tsv"
@@ -408,404 +408,312 @@ if torch.cuda.is_available():
 
 from sklearn.metrics import f1_score
 
-training_stats = []
+# training_stats = []
 
-# Measure the total training time for the whole run.
-total_t0 = time.time()
+# # Measure the total training time for the whole run.
+# total_t0 = time.time()
 
-#models parameters
-transformer_vars = [i for i in transformer.parameters()]
-d_vars = transformer_vars + [v for v in discriminator.parameters()]
-g_vars = [v for v in generator.parameters()]
+# #models parameters
+# transformer_vars = [i for i in transformer.parameters()]
+# d_vars = transformer_vars + [v for v in discriminator.parameters()]
+# g_vars = [v for v in generator.parameters()]
 
-#optimizer
-dis_optimizer = torch.optim.AdamW(d_vars, lr=learning_rate_discriminator)
-gen_optimizer = torch.optim.AdamW(g_vars, lr=learning_rate_generator) 
+# #optimizer
+# dis_optimizer = torch.optim.AdamW(d_vars, lr=learning_rate_discriminator)
+# gen_optimizer = torch.optim.AdamW(g_vars, lr=learning_rate_generator) 
 
-#scheduler
-if apply_scheduler:
-  num_train_examples = len(train_examples)
-  num_train_steps = int(num_train_examples / batch_size * num_train_epochs)
-  num_warmup_steps = int(num_train_steps * warmup_proportion)
+# #scheduler
+# if apply_scheduler:
+#   num_train_examples = len(train_examples)
+#   num_train_steps = int(num_train_examples / batch_size * num_train_epochs)
+#   num_warmup_steps = int(num_train_steps * warmup_proportion)
 
-  scheduler_d = get_constant_schedule_with_warmup(dis_optimizer, 
-                                           num_warmup_steps = num_warmup_steps)
-  scheduler_g = get_constant_schedule_with_warmup(gen_optimizer, 
-                                           num_warmup_steps = num_warmup_steps)
+#   scheduler_d = get_constant_schedule_with_warmup(dis_optimizer, 
+#                                            num_warmup_steps = num_warmup_steps)
+#   scheduler_g = get_constant_schedule_with_warmup(gen_optimizer, 
+#                                            num_warmup_steps = num_warmup_steps)
 
-best_dev_f1 = 0
-curr_f1 = 0
-# For each epoch...
-for epoch_i in range(0, num_train_epochs):
-    # ========================================
-    #               Training
-    # ========================================
-    # Perform one full pass over the training set.
-    file.write("")
-    file.write("\n")
-    file.write('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
-    file.write("\n")
-    file.write('Training...')
-    file.write("\n")
-    file.flush()
+# best_dev_f1 = 0
+# curr_f1 = 0
+# # For each epoch...
+# for epoch_i in range(0, num_train_epochs):
+#     # ========================================
+#     #               Training
+#     # ========================================
+#     # Perform one full pass over the training set.
+#     file.write("")
+#     file.write("\n")
+#     file.write('======== Epoch {:} / {:} ========'.format(epoch_i + 1, num_train_epochs))
+#     file.write("\n")
+#     file.write('Training...')
+#     file.write("\n")
+#     file.flush()
 
-    # Measure how long the training epoch takes.
-    t0 = time.time()
+#     # Measure how long the training epoch takes.
+#     t0 = time.time()
 
-    # Reset the total loss for this epoch.
-    tr_g_loss = 0
-    tr_d_loss = 0
+#     # Reset the total loss for this epoch.
+#     tr_g_loss = 0
+#     tr_d_loss = 0
 
-    # Put the model into training mode.
-    transformer.train() 
-    generator.train()
-    discriminator.train()
+#     # Put the model into training mode.
+#     transformer.train() 
+#     generator.train()
+#     discriminator.train()
 
-    # For each batch of training data...
-    for step, batch in enumerate(train_dataloader):
+#     # For each batch of training data...
+#     for step, batch in enumerate(train_dataloader):
 
-        # Progress update every print_each_n_step batches.
-        if step % print_each_n_step == 0 and not step == 0:
-            # Calculate elapsed time in minutes.
-            elapsed = format_time(time.time() - t0)
+#         # Progress update every print_each_n_step batches.
+#         if step % print_each_n_step == 0 and not step == 0:
+#             # Calculate elapsed time in minutes.
+#             elapsed = format_time(time.time() - t0)
             
-            # Report progress.
-            file.write('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
-            file.write("\n")
-            file.flush()
+#             # Report progress.
+#             file.write('  Batch {:>5,}  of  {:>5,}.    Elapsed: {:}.'.format(step, len(train_dataloader), elapsed))
+#             file.write("\n")
+#             file.flush()
 
-        # Unpack this training batch from our dataloader. 
-        b_input_ids = batch[0].to(device)
-        b_input_mask = batch[1].to(device)
-        b_labels = batch[2].to(device)
-        b_label_mask = batch[3].to(device)
+#         # Unpack this training batch from our dataloader. 
+#         b_input_ids = batch[0].to(device)
+#         b_input_mask = batch[1].to(device)
+#         b_labels = batch[2].to(device)
+#         b_label_mask = batch[3].to(device)
 
-        real_batch_size = b_input_ids.shape[0]
+#         real_batch_size = b_input_ids.shape[0]
      
-        # Encode real data in the Transformer
-        model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-        hidden_states = model_outputs[-1]
+#         # Encode real data in the Transformer
+#         model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+#         hidden_states = model_outputs[-1]
         
-        # Generate fake data that should have the same distribution of the ones
-        # encoded by the transformer. 
-        # First noisy input are used in input to the Generator
-        noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
-        # Gnerate Fake data
-        gen_rep = generator(noise)
+#         # Generate fake data that should have the same distribution of the ones
+#         # encoded by the transformer. 
+#         # First noisy input are used in input to the Generator
+#         noise = torch.zeros(real_batch_size, noise_size, device=device).uniform_(0, 1)
+#         # Gnerate Fake data
+#         gen_rep = generator(noise)
 
-        # Generate the output of the Discriminator for real and fake data.
-        # First, we put together the output of the tranformer and the generator
-        disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
-        # Then, we select the output of the disciminator
-        features, logits, probs = discriminator(disciminator_input)
+#         # Generate the output of the Discriminator for real and fake data.
+#         # First, we put together the output of the tranformer and the generator
+#         disciminator_input = torch.cat([hidden_states, gen_rep], dim=0)
+#         # Then, we select the output of the disciminator
+#         features, logits, probs = discriminator(disciminator_input)
 
-        # Finally, we separate the discriminator's output for the real and fake
-        # data
-        features_list = torch.split(features, real_batch_size)
-        D_real_features = features_list[0]
-        D_fake_features = features_list[1]
+#         # Finally, we separate the discriminator's output for the real and fake
+#         # data
+#         features_list = torch.split(features, real_batch_size)
+#         D_real_features = features_list[0]
+#         D_fake_features = features_list[1]
       
-        logits_list = torch.split(logits, real_batch_size)
-        D_real_logits = logits_list[0]
-        D_fake_logits = logits_list[1]
+#         logits_list = torch.split(logits, real_batch_size)
+#         D_real_logits = logits_list[0]
+#         D_fake_logits = logits_list[1]
         
-        probs_list = torch.split(probs, real_batch_size)
-        D_real_probs = probs_list[0]
-        D_fake_probs = probs_list[1]
+#         probs_list = torch.split(probs, real_batch_size)
+#         D_real_probs = probs_list[0]
+#         D_fake_probs = probs_list[1]
 
-        #---------------------------------
-        #  LOSS evaluation
-        #---------------------------------
-        # Generator's LOSS estimation
-        g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
-        g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
-        g_loss = g_loss_d + g_feat_reg
+#         #---------------------------------
+#         #  LOSS evaluation
+#         #---------------------------------
+#         # Generator's LOSS estimation
+#         g_loss_d = -1 * torch.mean(torch.log(1 - D_fake_probs[:,-1] + epsilon))
+#         g_feat_reg = torch.mean(torch.pow(torch.mean(D_real_features, dim=0) - torch.mean(D_fake_features, dim=0), 2))
+#         g_loss = g_loss_d + g_feat_reg
   
-        # Disciminator's LOSS estimation
-        logits = D_real_logits[:,0:-1]
-        log_probs = F.log_softmax(logits, dim=-1)
-        # The discriminator provides an output for labeled and unlabeled real data
-        # so the loss evaluated for unlabeled data is ignored (masked)
-        label2one_hot = torch.nn.functional.one_hot(b_labels, len(label_list))
-        per_example_loss = -torch.sum(label2one_hot * log_probs, dim=-1)
-        per_example_loss = torch.masked_select(per_example_loss, b_label_mask.to(device))
-        labeled_example_count = per_example_loss.type(torch.float32).numel()
+#         # Disciminator's LOSS estimation
+#         logits = D_real_logits[:,0:-1]
+#         log_probs = F.log_softmax(logits, dim=-1)
+#         # The discriminator provides an output for labeled and unlabeled real data
+#         # so the loss evaluated for unlabeled data is ignored (masked)
+#         label2one_hot = torch.nn.functional.one_hot(b_labels, len(label_list))
+#         per_example_loss = -torch.sum(label2one_hot * log_probs, dim=-1)
+#         per_example_loss = torch.masked_select(per_example_loss, b_label_mask.to(device))
+#         labeled_example_count = per_example_loss.type(torch.float32).numel()
 
-        # It may be the case that a batch does not contain labeled examples, 
-        # so the "supervised loss" in this case is not evaluated
-        if labeled_example_count == 0:
-          D_L_Supervised = 0
-        else:
-          D_L_Supervised = torch.div(torch.sum(per_example_loss.to(device)), labeled_example_count)
+#         # It may be the case that a batch does not contain labeled examples, 
+#         # so the "supervised loss" in this case is not evaluated
+#         if labeled_example_count == 0:
+#           D_L_Supervised = 0
+#         else:
+#           D_L_Supervised = torch.div(torch.sum(per_example_loss.to(device)), labeled_example_count)
                  
-        D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
-        D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
-        d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
+#         D_L_unsupervised1U = -1 * torch.mean(torch.log(1 - D_real_probs[:, -1] + epsilon))
+#         D_L_unsupervised2U = -1 * torch.mean(torch.log(D_fake_probs[:, -1] + epsilon))
+#         d_loss = D_L_Supervised + D_L_unsupervised1U + D_L_unsupervised2U
 
-        #---------------------------------
-        #  OPTIMIZATION
-        #---------------------------------
-        # Avoid gradient accumulation
-        gen_optimizer.zero_grad()
-        dis_optimizer.zero_grad()
+#         #---------------------------------
+#         #  OPTIMIZATION
+#         #---------------------------------
+#         # Avoid gradient accumulation
+#         gen_optimizer.zero_grad()
+#         dis_optimizer.zero_grad()
 
-        # Calculate weigth updates
-        # retain_graph=True is required since the underlying graph will be deleted after backward
-        g_loss.backward(retain_graph=True)
-        d_loss.backward() 
+#         # Calculate weigth updates
+#         # retain_graph=True is required since the underlying graph will be deleted after backward
+#         g_loss.backward(retain_graph=True)
+#         d_loss.backward() 
         
-        # Apply modifications
-        gen_optimizer.step()
-        dis_optimizer.step()
+#         # Apply modifications
+#         gen_optimizer.step()
+#         dis_optimizer.step()
 
-        # A detail log of the individual losses
-        #file.write("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
-        #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
-        #             g_loss_d, g_feat_reg))
+#         # A detail log of the individual losses
+#         #file.write("{0:.4f}\t{1:.4f}\t{2:.4f}\t{3:.4f}\t{4:.4f}".
+#         #      format(D_L_Supervised, D_L_unsupervised1U, D_L_unsupervised2U,
+#         #             g_loss_d, g_feat_reg))
 
-        # Save the losses to print them later
-        tr_g_loss += g_loss.item()
-        tr_d_loss += d_loss.item()
+#         # Save the losses to print them later
+#         tr_g_loss += g_loss.item()
+#         tr_d_loss += d_loss.item()
 
-        # Update the learning rate with the scheduler
-        if apply_scheduler:
-          scheduler_d.step()
-          scheduler_g.step()
+#         # Update the learning rate with the scheduler
+#         if apply_scheduler:
+#           scheduler_d.step()
+#           scheduler_g.step()
 
-    # Calculate the average loss over all of the batches.
-    avg_train_loss_g = tr_g_loss / len(train_dataloader)
-    avg_train_loss_d = tr_d_loss / len(train_dataloader)             
+#     # Calculate the average loss over all of the batches.
+#     avg_train_loss_g = tr_g_loss / len(train_dataloader)
+#     avg_train_loss_d = tr_d_loss / len(train_dataloader)             
     
-    # Measure how long this epoch took.
-    training_time = format_time(time.time() - t0)
+#     # Measure how long this epoch took.
+#     training_time = format_time(time.time() - t0)
 
-    file.write("")
-    file.write("\n")
-    file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
-    file.write("\n")
-    file.write("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
-    file.write("\n")
-    file.write("  Training epcoh took: {:}".format(training_time))
-    file.write("\n")
-    file.flush()
-    # ========================================
-    #     TEST ON THE EVALUATION DATASET
-    # ========================================
-    # After the completion of each training epoch, measure our performance on
-    # our test set.
-    file.write("")
-    file.write("Running Test...")
-    file.write("\n")
+#     file.write("")
+#     file.write("\n")
+#     file.write("  Average training loss generetor: {0:.3f}".format(avg_train_loss_g))
+#     file.write("\n")
+#     file.write("  Average training loss discriminator: {0:.3f}".format(avg_train_loss_d))
+#     file.write("\n")
+#     file.write("  Training epcoh took: {:}".format(training_time))
+#     file.write("\n")
+#     file.flush()
+#     # ========================================
+#     #     TEST ON THE EVALUATION DATASET
+#     # ========================================
+#     # After the completion of each training epoch, measure our performance on
+#     # our test set.
+#     file.write("")
+#     file.write("Running Test...")
+#     file.write("\n")
 
-    t0 = time.time()
+#     t0 = time.time()
 
-    # Put the model in evaluation mode--the dropout layers behave differently
-    # during evaluation.
-    transformer.eval() #maybe redundant
-    discriminator.eval()
-    generator.eval()
+#     # Put the model in evaluation mode--the dropout layers behave differently
+#     # during evaluation.
+#     transformer.eval() #maybe redundant
+#     discriminator.eval()
+#     generator.eval()
 
-    # Tracking variables 
-    total_test_accuracy = 0
+#     # Tracking variables 
+#     total_test_accuracy = 0
    
-    total_test_loss = 0
-    nb_test_steps = 0
+#     total_test_loss = 0
+#     nb_test_steps = 0
 
-    all_preds = []
-    all_labels_ids = []
+#     all_preds = []
+#     all_labels_ids = []
 
-    #loss
-    nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
+#     #loss
+#     nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
 
-    # Evaluate data for one epoch
-    for batch in dev_dataloader:
+#     # Evaluate data for one epoch
+#     for batch in dev_dataloader:
         
-        # Unpack this training batch from our dataloader. 
-        b_input_ids = batch[0].to(device)
-        b_input_mask = batch[1].to(device)
-        b_labels = batch[2].to(device)
+#         # Unpack this training batch from our dataloader. 
+#         b_input_ids = batch[0].to(device)
+#         b_input_mask = batch[1].to(device)
+#         b_labels = batch[2].to(device)
         
-        # Tell pytorch not to bother with constructing the compute graph during
-        # the forward pass, since this is only needed for backprop (training).
-        with torch.no_grad():        
-            model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-            hidden_states = model_outputs[-1]
-            _, logits, probs = discriminator(hidden_states)
-            ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
-            filtered_logits = logits[:,0:-1]
-            # Accumulate the test loss.
-            total_test_loss += nll_loss(filtered_logits, b_labels)
+#         # Tell pytorch not to bother with constructing the compute graph during
+#         # the forward pass, since this is only needed for backprop (training).
+#         with torch.no_grad():        
+#             model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
+#             hidden_states = model_outputs[-1]
+#             _, logits, probs = discriminator(hidden_states)
+#             ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
+#             filtered_logits = logits[:,0:-1]
+#             # Accumulate the test loss.
+#             total_test_loss += nll_loss(filtered_logits, b_labels)
             
-        # Accumulate the predictions and the input labels
-        _, preds = torch.max(filtered_logits, 1)
-        all_preds += preds.detach().cpu()
-        all_labels_ids += b_labels.detach().cpu()
+#         # Accumulate the predictions and the input labels
+#         _, preds = torch.max(filtered_logits, 1)
+#         all_preds += preds.detach().cpu()
+#         all_labels_ids += b_labels.detach().cpu()
 
-    # Report the final accuracy for this validation run.
-    all_preds = torch.stack(all_preds).numpy()
-    all_labels_ids = torch.stack(all_labels_ids).numpy()
-    dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
-    dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
+#     # Report the final accuracy for this validation run.
+#     all_preds = torch.stack(all_preds).numpy()
+#     all_labels_ids = torch.stack(all_labels_ids).numpy()
+#     dev_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
+#     dev_f1 = f1_score(all_labels_ids, all_preds, average="macro")
 
-    if dev_f1 >= best_dev_f1:
-      best_dev_f1 = dev_f1
-      torch.save(discriminator.state_dict(), disc_checkpoint_path)
-      torch.save(transformer.state_dict(), bert_checkpoint_path)
+#     if dev_f1 > best_dev_f1:
+#       best_dev_f1 = dev_f1
+#       torch.save(discriminator.state_dict(), disc_checkpoint_path)
+#       torch.save(transformer.state_dict(), bert_checkpoint_path)
 
-    file.write("  Dev Accuracy: {0:.3f}".format(dev_accuracy))
-    file.write("\n")
-    file.write("  Dev F1: {0:.3f}".format(dev_f1))
-    file.write("\n")
+#     file.write("  Dev Accuracy: {0:.3f}".format(dev_accuracy))
+#     file.write("\n")
+#     file.write("  Dev F1: {0:.3f}".format(dev_f1))
+#     file.write("\n")
+
+#     # Calculate the average loss over all of the batches.
+#     avg_test_loss = total_test_loss / len(dev_dataloader)
+#     avg_test_loss = avg_test_loss.item()
     
-    torch.save(discriminator.state_dict(), disc_last_checkpoint_path)
-    torch.save(transformer.state_dict(), bert_last_checkpoint_path)
+#     # Measure how long the validation run took.
+#     test_time = format_time(time.time() - t0)
     
-    # Calculate the average loss over all of the batches.
-    avg_test_loss = total_test_loss / len(dev_dataloader)
-    avg_test_loss = avg_test_loss.item()
-    
-    # Measure how long the validation run took.
-    test_time = format_time(time.time() - t0)
-    
-    file.write("  Dev Loss: {0:.3f}".format(avg_test_loss))
-    file.write("\n")
-    file.write("  Dev took: {:}".format(test_time))
-    file.write("\n")
-    file.flush()
+#     file.write("  Dev Loss: {0:.3f}".format(avg_test_loss))
+#     file.write("\n")
+#     file.write("  Dev took: {:}".format(test_time))
+#     file.write("\n")
+#     file.flush()
 
-    confusion_matrix = np.zeros((19, 19), dtype=np.int16)
-    for i in range (len(all_preds)):
-      confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-    file.write("Dev Confusion Matrix after epoch completion: \n")
-    file.write(str(confusion_matrix))
-    file.write("\n")
+#     confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+#     for i in range (len(all_preds)):
+#       confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+#     file.write("Dev Confusion Matrix after epoch completion: \n")
+#     file.write(str(confusion_matrix))
+#     file.write("\n")
 
-    # Record all statistics from this epoch.
-    training_stats.append(
-        {
-            'epoch': epoch_i + 1,
-            'Training Loss generator': avg_train_loss_g,
-            'Training Loss discriminator': avg_train_loss_d,
-            'Valid. Loss': avg_test_loss,
-            'Valid. Accur.': dev_accuracy,
-            'Dev F1': dev_f1,
-            'Dev Accur.': dev_accuracy,
-            'Training Time': training_time,
-            'Test Time': test_time
-        }
-    )
+#     # Record all statistics from this epoch.
+#     training_stats.append(
+#         {
+#             'epoch': epoch_i + 1,
+#             'Training Loss generator': avg_train_loss_g,
+#             'Training Loss discriminator': avg_train_loss_d,
+#             'Valid. Loss': avg_test_loss,
+#             'Valid. Accur.': dev_accuracy,
+#             'Dev F1': dev_f1,
+#             'Dev Accur.': dev_accuracy,
+#             'Training Time': training_time,
+#             'Test Time': test_time
+#         }
+#     )
 
 
-for stat in training_stats:
-  file.write(str(stat))
-  file.write("\n")
+# for stat in training_stats:
+#   file.write(str(stat))
+#   file.write("\n")
 
-# confusion_matrix = np.zeros((19, 19), dtype=np.int16)
-# for i in range (len(all_preds)):
-#     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
+# # confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+# # for i in range (len(all_preds)):
+# #     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 
-# file.write(str(confusion_matrix))
+# # file.write(str(confusion_matrix))
+# # file.write("\n")
+
+# file.write("\nTraining complete!")
 # file.write("\n")
 
-file.write("\nTraining complete!")
-file.write("\n")
-
-file.write("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
-file.write("\n")
-
-
-file.write(" Evaluating Original Test Data Without Cleaning")
-file.write("\n")
-file.flush()
-
-# ==============ADDED CELL TEST SET ==========================
-    #     TEST ON THE  TEST DATASET
-    # ========================================
-file.write("")
-file.write("\n")
-file.write("Running Test...")
-file.write("\n")
-
-t0 = time.time()
-
-# Put the model in evaluation mode--the dropout layers behave differently
-# during evaluation.
-transformer.eval() #maybe redundant
-discriminator.eval()
-generator.eval()
-
-# Tracking variables 
-total_test_accuracy = 0
-
-total_test_loss = 0
-nb_test_steps = 0
-
-all_preds = []
-all_labels_ids = []
-
-#loss
-nll_loss = torch.nn.CrossEntropyLoss(ignore_index=-1)
-
-# Evaluate data for one epoch
-for batch in test_dataloader:
-    
-    # Unpack this training batch from our dataloader. 
-    b_input_ids = batch[0].to(device)
-    b_input_mask = batch[1].to(device)
-    b_labels = batch[2].to(device)
-    
-    # Tell pytorch not to bother with constructing the compute graph during
-    # the forward pass, since this is only needed for backprop (training).
-    with torch.no_grad():        
-        model_outputs = transformer(b_input_ids, attention_mask=b_input_mask)
-        hidden_states = model_outputs[-1]
-        _, logits, probs = discriminator(hidden_states)
-        ###log_probs = F.log_softmax(probs[:,1:], dim=-1)
-        filtered_logits = logits[:,0:-1]
-        # Accumulate the test loss.
-        total_test_loss += nll_loss(filtered_logits, b_labels)
-        
-    # Accumulate the predictions and the input labels
-    _, preds = torch.max(filtered_logits, 1)
-    all_preds += preds.detach().cpu()
-    all_labels_ids += b_labels.detach().cpu()
-
-# Report the final accuracy for this validation run.
-all_preds = torch.stack(all_preds).numpy()
-all_labels_ids = torch.stack(all_labels_ids).numpy()
-test_accuracy = np.sum(all_preds == all_labels_ids) / len(all_preds)
-test_f1 = f1_score(all_labels_ids, all_preds, average="macro")
-file.write(" Test Accuracy: {0:.3f}".format(test_accuracy))
-file.write("\n")
-file.write(" Test F1: {0:.3f}".format(test_f1))
-file.write("\n")
-
-# Calculate the average loss over all of the batches.
-avg_test_loss = total_test_loss / len(test_dataloader)
-avg_test_loss = avg_test_loss.item()
-
-# Measure how long the validation run took.
-test_time = format_time(time.time() - t0)
-
-file.write("Test Loss: {0:.3f}".format(avg_test_loss))
-file.write("\n")
-file.write("Test Loss took: {:}".format(test_time))
-file.write("\n")
-
-# file.write(all_preds)
+# file.write("Total training took {:} (h:mm:ss)".format(format_time(time.time()-total_t0)))
 # file.write("\n")
-# file.write(all_labels_ids)
+
+
+# file.write(" Evaluating Original Test Data Without Cleaning")
 # file.write("\n")
-# label_list[all_preds[0]]
-
-confusion_matrix = np.zeros((19, 19), dtype=np.int16)
-for i in range (len(all_preds)):
-  confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
-file.write("Test Confusion matrix: \n")
-file.write(str(confusion_matrix))
-file.write("\n")
-file.flush()
-
+# file.flush()
 
 # ==============ADDED CELL TEST SET ==========================
     #     TEST AGAINST BEST SAVED MODEL

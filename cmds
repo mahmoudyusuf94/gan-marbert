@@ -8,8 +8,17 @@ gdown --id 1z1Cb5JBFlUi8Fr6C5w_4z404kV6qZxY8
 gdown --id 1DPf3KGD29-RBV7TB2BoLP3y86kYJHQZU 
 gdown --id 1UJ3hu8DbO-JhgE_60tPs1unehONArE3M 
 
+
+gdown --id 1jFkJ-pkJ16Fkbli7DXDYjyVx8TFNnp1s
+gdown --id 1K8WL6Br6UnVP1QMDW7vaNvywkrtxMeU-
+gdown --id 1joxGq6MZxeSf-TBNuYd9gfrzVUTe175y
+
 mv qadi-train.tsv data
 mv qadi-test.tsv data
 mv unlabeled.tsv data
 mv unlabeled-cleaned-sampled.tsv data
 mv qadi-test-not-cleaned.tsv data
+
+mv unlabeled-cleaned-sampled-50k.tsv data
+mv qadi-train-without-dev.tsv data
+mv qadi-dev.tsv data
