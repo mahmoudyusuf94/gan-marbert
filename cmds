@@ -8,8 +8,17 @@ gdown --id 1z1Cb5JBFlUi8Fr6C5w_4z404kV6qZxY8
 gdown --id 1DPf3KGD29-RBV7TB2BoLP3y86kYJHQZU 
 gdown --id 1UJ3hu8DbO-JhgE_60tPs1unehONArE3M 
 
+gdown --id 16KzMktgU-_COsK6YjgWvixl3rQaowb85 #arSarcasm-train-gan.tsv
+gdown --id 1Iyc0jukshFoTSz4HKzoHXSiwnGu8wXZm #arSarcasm-test-gan.tsv
+gdown --id 1yQGeqEi1GXiEQwC3f2_G9_EJDW-UsxqG #nadi-unlabeled-50k-UNK.tsv
+gdown --id 1kIuUGHu5KG0HpLn5GA23GRcmmVuHLvQ8 #nadi-unlabeled-half-UNK.tsv
+
 mv qadi-train.tsv data
 mv qadi-test.tsv data
 mv unlabeled.tsv data
 mv unlabeled-cleaned-sampled.tsv data
 mv qadi-test-not-cleaned.tsv data
+mv arSarcasm-train-gan.tsv data
+mv arSarcasm-test-gan.tsv data
+mv nadi-unlabeled-50k-UNK.tsv data
+mv nadi-unlabeled-half-UNK.tsv data

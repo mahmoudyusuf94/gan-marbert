@@ -43,7 +43,7 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 80
+max_seq_length = 35
 batch_size = 64
 # batch_size = 64
 
@@ -118,11 +118,11 @@ model_name = "UBC-NLP/MARBERT"
 # !mv unlabeled-cleaned-sampled.tsv data
 # !mv qadi-test-not-cleaned.tsv data
 
-labeled_file = "./data/qadi-train.tsv"
+labeled_file = "./data/arSarcasm-train-gan.tsv"
 # unlabeled_file = "./data/unlabeled.tsv"
-unlabeled_file = "./data/unlabeled-cleaned-sampled.tsv"
-test_filename = "./data/qadi-test.tsv"
-test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
+unlabeled_file = "./data/nadi-unlabeled-50k-UNK.tsv"
+test_filename = "./data/arSarcasm-test-gan.tsv"
+test_filename_nc = "./data/arSarcasm-test-gan.tsv"
 
 
 ### Sampled Data ####
@@ -140,7 +140,7 @@ test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
 # unlabeled_file = "./data/unlabeled-sampled.tsv"
 # test_filename = "./data/qadi-test-sampled.tsv"
 
-label_list = ['UNK_UNK','Algeria', 'Bahrain', 'Egypt', 'Iraq', 'Jordan', 'Kuwait', 'Lebanon', 'Libya', 'Morocco', 'Oman', 'Palestine', 'Qatar', 'Saudi_Arabia', 'Sudan', 'Syria', 'Tunisia', 'United_Arab_Emirates', 'Yemen']
+label_list = ['UNK_UNK','msa','egypt','levant','gulf','magreb']
 
 # ! git clone https://github.com/crux82/ganbert
 
@@ -649,7 +649,7 @@ for epoch_i in range(0, num_train_epochs):
     file.write("\n")
     file.flush()
 
-    confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+    confusion_matrix = np.zeros((6, 6), dtype=np.int16)
     for i in range (len(all_preds)):
       confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
     file.write("Confusion Matrix after epoch completion: \n")
@@ -769,13 +769,13 @@ file.write("\n")
 file.write(" Original Test not cleaned - Loss took: {:}".format(test_time))
 file.write("\n")
 
-file.write(all_preds)
-file.write("\n")
-file.write(all_labels_ids)
-file.write("\n")
-label_list[all_preds[0]]
+# file.write(all_preds)
+# file.write("\n")
+# file.write(all_labels_ids)
+# file.write("\n")
+# label_list[all_preds[0]]
 
-confusion_matrix = np.zeros((19, 19), dtype=np.int16)
+confusion_matrix = np.zeros((6, 6), dtype=np.int16)
 for i in range (len(all_preds)):
     confusion_matrix[all_labels_ids[i], all_preds[i]] += 1
 file.write("Confusion matrix of original test data (no cleaning): \n")
