@@ -43,7 +43,7 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 80
+max_seq_length = 35
 batch_size = 64
 # batch_size = 64
 
@@ -120,7 +120,7 @@ model_name = "UBC-NLP/MARBERT"
 
 labeled_file = "./data/qadi-train.tsv"
 # unlabeled_file = "./data/unlabeled.tsv"
-unlabeled_file = "./data/unlabeled-cleaned-sampled.tsv"
+unlabeled_file = "./data/unlabeled-cleaned.tsv"
 test_filename = "./data/qadi-test.tsv"
 test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
 
@@ -769,11 +769,11 @@ file.write("\n")
 file.write(" Original Test not cleaned - Loss took: {:}".format(test_time))
 file.write("\n")
 
-file.write(all_preds)
-file.write("\n")
-file.write(all_labels_ids)
-file.write("\n")
-label_list[all_preds[0]]
+# file.write(all_preds)
+# file.write("\n")
+# file.write(all_labels_ids)
+# file.write("\n")
+# label_list[all_preds[0]]
 
 confusion_matrix = np.zeros((19, 19), dtype=np.int16)
 for i in range (len(all_preds)):
