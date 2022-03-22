@@ -15,3 +15,6 @@ mv unlabeled.tsv data
 mv unlabeled-cleaned-sampled.tsv data
 mv qadi-test-not-cleaned.tsv data
 mv unlabeled-cleaned.tsv data
+
+gdown --id 1b_Nx5HxSBNlVKcMOv2mkOYru6bDjiUBZ
+mv unlabeled-cleaned-half-sampled.tsv data

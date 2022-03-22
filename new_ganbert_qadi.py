@@ -43,7 +43,7 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 35
+max_seq_length = 45
 batch_size = 64
 # batch_size = 64
 
@@ -77,7 +77,7 @@ multi_gpu = True
 apply_scheduler = False
 warmup_proportion = 0.1
 # Print
-print_each_n_step = 50
+print_each_n_step = 500
 
 #--------------------------------
 #  Adopted Tranformer model
@@ -120,7 +120,7 @@ model_name = "UBC-NLP/MARBERT"
 
 labeled_file = "./data/qadi-train.tsv"
 # unlabeled_file = "./data/unlabeled.tsv"
-unlabeled_file = "./data/unlabeled-cleaned.tsv"
+unlabeled_file = "./data/unlabeled-cleaned-half-sampled.tsv"
 test_filename = "./data/qadi-test.tsv"
 test_filename_nc = "./data/qadi-test-not-cleaned.tsv"
 
