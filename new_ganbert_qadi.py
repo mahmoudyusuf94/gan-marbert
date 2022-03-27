@@ -43,7 +43,7 @@ file.flush()
 #  Transformer parameters
 #--------------------------------
 # max_seq_length = 35
-max_seq_length = 45
+max_seq_length = 40
 batch_size = 64
 # batch_size = 64
 
@@ -78,7 +78,8 @@ apply_scheduler = False
 warmup_proportion = 0.1
 # Print
 print_each_n_step = 500
-
+checkpoint_path="saved_model"
+load_saved_model=False
 #--------------------------------
 #  Adopted Tranformer model
 #--------------------------------
@@ -420,8 +421,22 @@ if apply_scheduler:
   scheduler_g = get_constant_schedule_with_warmup(gen_optimizer, 
                                            num_warmup_steps = num_warmup_steps)
 
+cur_epoch = 0
+if load_saved_model:
+  checkpoint = torch.load(checkpoint_path)
+  discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+  generator.load_state_dict(checkpoint['generator_state_dict'])
+  transformer.load_state_dict(checkpoint['transformer_state_dict'])
+
+  gen_optimizer.load_state_dict(checkpoint['gen_optimizer_state_dict'])
+  dis_optimizer.load_state_dict(checkpoint['dis_optimizer_state_dict'])
+
+  cur_epoch = checkpoint['epoch']
+  tr_d_loss = checkpoint['tr_d_loss']
+  tr_g_loss = checkpoint['tr_g_loss']
+
 # For each epoch...
-for epoch_i in range(0, num_train_epochs):
+for epoch_i in range(cur_epoch, num_train_epochs):
     # ========================================
     #               Training
     # ========================================
@@ -573,6 +588,19 @@ for epoch_i in range(0, num_train_epochs):
     file.write("  Training epcoh took: {:}".format(training_time))
     file.write("\n")
     file.flush()
+
+    torch.save({
+      'epoch': epoch_i + 1,
+      'discriminator_state_dict': discriminator.state_dict(),
+      'generator_state_dict': generator.state_dict(),
+      'transformer_state_dict': transformer.state_dict(),
+
+      'gen_optimizer_state_dict': gen_optimizer.state_dict(),
+      'dis_optimizer_state_dict': dis_optimizer.state_dict(),
+
+      'tr_d_loss': tr_d_loss,
+      'tr_g_loss': tr_g_loss,
+      }, checkpoint_path)
     # ========================================
     #     TEST ON THE EVALUATION DATASET
     # ========================================
